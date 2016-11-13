@@ -1,11 +1,11 @@
 #include <math.h>
 #include <stdint.h>
 #include "OctoSK6812.h"
-#include "palletteSampler.h"
+#include "paletteSampler.h"
 #include "correction.h"
 #include "coords.h"
 
-#include "unicornBarf_pallette.h"
+#include "unicornBarf_palette.h"
 
 const int ledsPerStrip = 60;
 const double speedFactor = 0.05;
@@ -33,7 +33,7 @@ void loop() {
   iteration++;
 
   for (i = 0; i < ledsPerStrip; i++) {
-      getPalletteSampleRgbw(unicornBarfPallette, unicornBarfPalletteLen, getX(i) + (speedFactor * iteration), currentRgbwVal);
+      getPaletteSampleRgbw(unicornBarfPalette, unicornBarfPaletteLen, getX(i) + (speedFactor * iteration), currentRgbwVal);
       
       colourCorrect(currentRgbwVal);
       // note: as we are using 10-bit colour depth, you must either call gammaCorrect() or rescale() before setting the pixel
