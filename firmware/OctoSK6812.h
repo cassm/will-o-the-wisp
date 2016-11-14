@@ -26,6 +26,7 @@
 
 #include <Arduino.h>
 #include "DMAChannel.h"
+#include "hsi.h"
 
 #if TEENSYDUINO < 121
 #error "Teensyduino version 1.21 or later is required to compile this library."
@@ -57,6 +58,12 @@ public:
   void setPixel(uint32_t num, uint16_t *rgbwVal) {
     setPixel(num, (uint8_t)rgbwVal[0], (uint8_t)rgbwVal[1], (uint8_t)rgbwVal[2], (uint8_t)rgbwVal[3]);
   }
+  void setPixel(int i, HSI *hsiVal) {
+    uint16_t rgbwVal[4];
+    hsi2rgbw(hsiVal, rgbwVal);
+    setPixel(i, rgbwVal);
+  }
+
   int getPixel(uint32_t num);
 
   void show(void);

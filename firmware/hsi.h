@@ -7,7 +7,7 @@ struct HSI {
   double h;
   double s;
   double i;
-  int gammaVals;
+  int gamma;
 };
 
 // uint16_t as we are using 10 bit colour depth

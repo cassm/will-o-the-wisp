@@ -1,4 +1,5 @@
 #include "hsi.h"
+#include "gamma.h"
 #include <math.h>
 
 const double pi = 3.1416;
