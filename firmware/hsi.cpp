@@ -2,12 +2,10 @@
 #include "gamma.h"
 #include <math.h>
 
-const double pi = 3.1416;
-
 int hsi2rgbw(struct HSI* hsi, uint16_t* rgbwVal) {
   uint16_t r, g, b, w;
   double cos_h, cos_1047_h, H;
-  hsi->h = fmod(hsi->h, 2 * pi); // cycle H around to 2*pi radians
+  hsi->h = fmod(hsi->h, 2 * M_PI); // cycle H around to 2*M_PI radians
   hsi->s = hsi->s > 0 ? (hsi->s < 1 ? hsi->s : 1) : 0; // clamp S and I to interval [0,1]
   hsi->i = hsi->i > 0 ? (hsi->i < 1 ? hsi->i : 1) : 0;
 

@@ -1,4 +1,6 @@
 #include "modulationFuncs.h"
+#include <Arduino.h>
+#include <math.h>
 #include "gamma.h"
 
 void fadePixel (HSI *hsiVal, int fadeRate, float minIntensity) {
@@ -21,11 +23,11 @@ void fadePixel (HSI *hsiVal, int fadeRate, float minIntensity) {
 }
 
 float logNormalPDF (float x) {
-  return (1 / (x * sqrt(2 * pi))) * exp(-1 * (pow(log(x) / log(2), 2)));
+  return (1 / (x * sqrt(2 * M_PI))) * exp(-1 * (pow(log(x) / log(2), 2)));
 }
 
 float doopsFunc (float x) {
-  return 0.5 * (sin(x) * exp(1.5 * sin(x + pi / 2)));
+  return 0.5 * (sin(x) * exp(1.5 * sin(x + M_PI / 2)));
 }
 
 bool randomIntervalTimer (int eventInterval) {
