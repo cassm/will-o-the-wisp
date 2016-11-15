@@ -3,6 +3,7 @@ import sys
 from scipy.misc import imread
 from scipy.misc import imsave
 import numpy
+from rgb2hsi import rgb2hsi, HSI
 
 
 if len(sys.argv) != 4:
@@ -22,6 +23,7 @@ imageLength = image.shape[1]
 pixelsPerOutput = float(imageLength) / float(palletteLength)
 
 output = []
+hsiOutput = []
 
 for i in range(palletteLength):
     output.append([])
@@ -62,6 +64,9 @@ for i in range(palletteLength):
 
 
 scalingFactor = 1023./float(max(map(max,output)))
+
+for i in output:
+    hsiOutput.append(rgb2hsi(i))
 
 for pixel in range(palletteLength):
     for colour in range(3):
@@ -118,7 +123,8 @@ f = open(palletteName+"_pallette.h", 'w')
 f.write("#ifndef {0}\n#define {0}\n\n// RGBW file generated via genPallette.py, created by Cass May\n\n#include <stdint.h>\n\n".format(palletteName.upper()+"_PALLETTE_H"))
 
 f.write("int {}PalletteLen = {};\n".format(palletteName, palletteLength))
-f.write("uint16_t {}[{}][4] = {};\n\n".format(palletteName+"Pallette", palletteLength, str(output).replace('[', '{').replace(']','}')))
+f.write("uint16_t {}[{}][4] = {};\n\n".format(palletteName+"RgbwPallette", palletteLength, str(output).replace('[', '{').replace(']','}')))
+f.write("double {}[{}][3] = {};\n\n".format(palletteName+"HsiPallette", palletteLength, str(hsiOutput).replace('[', '{').replace(']','}')))
 
 f.write("#endif\n")
 
