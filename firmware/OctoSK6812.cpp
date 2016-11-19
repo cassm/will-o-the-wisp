@@ -31,7 +31,8 @@
 uint16_t OctoSK6812::stripLen;
 uint8_t OctoSK6812::pixelBits;
 void * OctoSK6812::frameBuffer;
-void * OctoSK6812::drawBuffer;
+void * OctoSK6812::drawBuffer0;
+void * OctoSK6812::drawBuffer1;
 uint8_t OctoSK6812::params;
 DMAChannel OctoSK6812::dma1;
 DMAChannel OctoSK6812::dma2;
@@ -42,11 +43,12 @@ static volatile uint8_t update_in_progress = 0;
 static uint32_t update_completed_at = 0;
 
 
-OctoSK6812::OctoSK6812(uint32_t numPerStrip, void *frameBuf, void *drawBuf, uint8_t config)
+OctoSK6812::OctoSK6812(uint32_t numPerStrip, void *frameBuf, void *drawBuf0, void *drawBuf1, uint8_t config)
 {
   stripLen = numPerStrip;
   frameBuffer = frameBuf;
-  drawBuffer = drawBuf;
+  drawBuffer0 = drawBuf0;
+  drawBuffer1 = drawBuf1;
   params = config;
   if (params > 3) {
     // if RGBW strips we need 32 bits per led
@@ -71,8 +73,8 @@ OctoSK6812::OctoSK6812(uint32_t numPerStrip, void *frameBuf, void *drawBuf, uint
 // have an insight about tuning these parameters AND you have actually tested on
 // real LED strips, please contact paul@pjrc.com.  Please do not email based only
 // on reading the datasheets and purely theoretical analysis.
-#define SK6812_TIMING_T0H  60
-#define SK6812_TIMING_T1H  176
+#define SK6812_TIMING_T0H  64
+#define SK6812_TIMING_T1H  128
 
 // Discussion about timing and flicker & color shift issues:
 // http://forum.pjrc.com/threads/23877-WS2812B-compatible-with-OctoWS2811-library?p=38190&viewfull=1#post38190
@@ -86,10 +88,17 @@ void OctoSK6812::begin(void)
 
   // set up the buffers
   memset(frameBuffer, 0, bufsize);
-  if (drawBuffer) {
-    memset(drawBuffer, 0, bufsize);
+  if (drawBuffer0 && drawBuffer1) {
+    memset(drawBuffer0, 0, bufsize);
+    memset(drawBuffer1, 0, bufsize);
+  } else if (drawBuffer0) {
+    memset(drawBuffer0, 0, bufsize);
+    drawBuffer1 = drawBuffer0;
+  } else if (drawBuffer1) {
+    memset(drawBuffer1, 0, bufsize);
+    drawBuffer0 = drawBuffer1;
   } else {
-    drawBuffer = frameBuffer;
+    drawBuffer0 = drawBuffer1 = frameBuffer;
   }
   
   // configure the 8 output pins
@@ -209,8 +218,28 @@ int OctoSK6812::busy(void)
   return 0;
 }
 
-void OctoSK6812::show(void)
+void OctoSK6812::dither(int iteration)
 {
+  uint64_t ditherPattern = 0x00808892aadbeef7;
+
+  for (int i = 0; i < 64; i++)
+  {
+    int bitVal = (ditherPattern>>((64-((i/8)*8))+i%8)) & 1;
+    if (iteration)
+    {
+      show(bitVal);
+    }
+    else
+    {
+      show(!bitVal);
+    }
+  }
+}
+
+void OctoSK6812::show(int bufNum)
+{
+  void *drawBuffer = bufNum == 0 ? drawBuffer0 : drawBuffer1;
+
   // wait for any prior DMA operation
   //Serial1.print("1");
   while (update_in_progress) ; 
@@ -296,8 +325,9 @@ void OctoSK6812::show(void)
   //Serial1.print("4");
 }
 
-void OctoSK6812::setPixel(uint32_t num, int color)
+void OctoSK6812::setPixel(uint32_t num, int color, int bufNum)
 {
+  void *drawBuffer = bufNum == 0 ? drawBuffer0 : drawBuffer1;
   uint32_t strip, offset, mask;
   uint8_t bit, *p;
   
@@ -330,8 +360,9 @@ void OctoSK6812::setPixel(uint32_t num, int color)
   }
 }
 
-int OctoSK6812::getPixel(uint32_t num)
+int OctoSK6812::getPixel(uint32_t num, int bufNum)
 {
+  void *drawBuffer = bufNum == 0 ? drawBuffer0 : drawBuffer1;
   uint32_t strip, offset, mask;
   uint8_t bit, *p;
   int color=0;

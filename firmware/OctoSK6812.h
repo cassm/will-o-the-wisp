@@ -45,28 +45,28 @@
 
 class OctoSK6812 {
 public:
-  OctoSK6812(uint32_t numPerStrip, void *frameBuf, void *drawBuf, uint8_t config = SK6812_RGB);
+  OctoSK6812(uint32_t numPerStrip, void *frameBuf, void *drawBuf0, void *drawBuf1, uint8_t config = SK6812_RGB);
   void begin(void);
 
-  void setPixel(uint32_t num, int color);
-  void setPixel(uint32_t num, uint8_t red, uint8_t green, uint8_t blue) {
-    setPixel(num, color(red, green, blue));
+  void setPixel(uint32_t num, int color, int bufNum);
+  void setPixel(uint32_t num, uint8_t red, uint8_t green, uint8_t blue, int bufNum) {
+    setPixel(num, color(red, green, blue), bufNum);
   }
-  void setPixel(uint32_t num, uint8_t red, uint8_t green, uint8_t blue, uint8_t white) {
-    setPixel(num, color(red, green, blue, white));
+  void setPixel(uint32_t num, uint8_t red, uint8_t green, uint8_t blue, uint8_t white, int bufNum) {
+    setPixel(num, color(red, green, blue, white), bufNum);
   }
-  void setPixel(uint32_t num, uint16_t *rgbwVal) {
-    setPixel(num, (uint8_t)rgbwVal[0], (uint8_t)rgbwVal[1], (uint8_t)rgbwVal[2], (uint8_t)rgbwVal[3]);
-  }
-  void setPixel(int i, HSI *hsiVal) {
-    uint16_t rgbwVal[4];
-    hsi2rgbw(hsiVal, rgbwVal);
-    setPixel(i, rgbwVal);
+  void setPixel(uint32_t num, uint16_t *rgbwVal, int bufNum) {
+    setPixel(num, (uint8_t)rgbwVal[0], (uint8_t)rgbwVal[1], (uint8_t)rgbwVal[2], (uint8_t)rgbwVal[3], bufNum);
   }
 
-  int getPixel(uint32_t num);
+  void setPixelRGB(uint32_t num, uint16_t *rgbVal, int bufNum) {
+    setPixel(num, (uint8_t)rgbVal[0], (uint8_t)rgbVal[1], (uint8_t)rgbVal[2], 0, bufNum);
+  }
 
-  void show(void);
+  int getPixel(uint32_t num, int bufNum);
+
+  void dither(int iteration);
+  void show(int bufNum);
   int busy(void);
 
   int numPixels(void) {
@@ -84,7 +84,8 @@ private:
   static uint16_t stripLen;
   static uint8_t pixelBits;
   static void *frameBuffer;
-  static void *drawBuffer;
+  static void *drawBuffer0;
+  static void *drawBuffer1;
   static uint8_t params;
   static DMAChannel dma1, dma2, dma3;
   static void isr(void);
