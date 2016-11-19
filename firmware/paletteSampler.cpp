@@ -2,7 +2,7 @@
 #include "paletteSampler.h"
 #include "gamma.h"
 
-void linearInterpolate (uint16_t palette[][4], int paletteLength, double index, uint16_t *sample, int gammaCorrection) {
+void linearInterpolate (uint16_t palette[][4], int paletteLength, double index, uint16_t *sample, bool gammaCorrection) {
     // handle with negative indices
     while (index < 0)
         index += paletteLength;
@@ -23,19 +23,29 @@ void linearInterpolate (uint16_t palette[][4], int paletteLength, double index, 
 
     // four colour channels
     for (int i = 0; i < 4; i++) {
+        interpolation = ((1-ratio) * palette[lowerIndex][i]) + (ratio * palette[upperIndex][i]);
         if (gammaCorrection) {
-            interpolation = ((1-ratio) * gamma_table[palette[lowerIndex][i]]) + (ratio * gamma_table[palette[upperIndex][i]]);
+            sample[i] = gamma_table[(uint16_t)interpolation];
         }
         else {
-            interpolation = ((1-ratio) * palette[lowerIndex][i]) + (ratio * palette[upperIndex][i]);
+            sample[i] = (uint16_t)interpolation;
         }
-        sample[i] = (uint16_t)interpolation;
     }
 }
 
-
 // use a wrapper function in case we want to add further interpolation options later
-void getPaletteSampleRgbw (uint16_t palette[][4], int paletteLength, double index, uint16_t *sample) {
-    linearInterpolate (palette, paletteLength, index, sample, 0);
+void getPaletteSample (uint16_t palette[][4], int paletteLength, double index, uint16_t *sample, bool interpolate, bool gammaCorrection) {
+    if (interpolate) {
+       linearInterpolate (palette, paletteLength, index, sample, gammaCorrection);
+    }
+
+    else {
+        int intIndex = index;
+        intIndex %= paletteLength;
+
+        for (int i = 0; i < 4; i++) {
+            sample[i] = palette[intIndex][i];
+        }
+    }
 }
 
