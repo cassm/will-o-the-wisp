@@ -5,6 +5,7 @@ Will-o-the-wisp
 ---------------------------------------------
 
 ![Hands for scale](/images/wisp.jpg?raw=true "Assembled example")
+[Photo Credit: Dee Ruane](https://www.instagram.com/everythinglightsup/)
 
 Assembly notes:
 --------------
