@@ -4,6 +4,8 @@ Will-o-the-wisp
 60 4-channel (rgbww) SK6812 LEDs arranged over 12 pentagonal PCBs in a pentagonal dodecahedron, controlled by a teensy 3.X.
 ---------------------------------------------
 
+![Hands for scale](/images/wisp.jpg?raw=true "Assembled example")
+
 Assembly notes:
 --------------
 
