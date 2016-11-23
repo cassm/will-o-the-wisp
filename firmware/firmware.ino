@@ -46,7 +46,7 @@ void setup() {
 void loop() {
   uint16_t currentRgbwVal[4];
   int i;
-  
+
   iteration++;
 
   switch (patternNumber) {
@@ -63,34 +63,34 @@ void loop() {
               currentRgbwVal[3] = (((sin((-1*getX(i))+iteration*speedFactor*0.05) + 1) * 0.75 + 0.25) * 511);
 
               gammaCorrect (currentRgbwVal);
-    
+
               strip.setPixel(i, currentRgbwVal, 0);
-    
+
               if (iteration == 0) {
                   strip.setPixel(i, currentRgbwVal, 1);
               }
           }
-      
+
           strip.show(0);
           break;
 
   case 1: for (i = 0; i < ledsPerStrip; i++) {
               getPaletteSample(stressTestRgbwPalette, stressTestPaletteLen, getX(i)*2 + (speedFactor * iteration), currentRgbwVal, true, true);
               //getPaletteSample(unicornBarfRgbwPalette, unicornBarfPaletteLen, getX(i)*2 + (speedFactor * iteration), currentRgbwVal, true, true);
-    
+
               //colourCorrect(currentRgbwVal);
-    
+
               // note: as we are using 10-bit colour depth, you must either call gammaCorrect() or rescale() before setting the pixel
               rescale(currentRgbwVal);
               //gammaCorrect (currentRgbwVal);
-    
+
               strip.setPixel(i, currentRgbwVal, iteration%2);
-    
+
               if (iteration == 0) {
                   strip.setPixel(i, currentRgbwVal, 1);
               }
           }
-      
+
           strip.dither(iteration%2);
           break;
   }
