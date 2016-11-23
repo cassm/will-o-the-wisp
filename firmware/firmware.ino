@@ -15,6 +15,8 @@
 const int ledsPerStrip = 60;
 const double speedFactor = 1;
 volatile int patternNumber = 0;
+long long unsigned int lastDebounceTime = 0;
+int debounceInterval = 2;
 
 long long unsigned int iteration;
 
@@ -25,6 +27,12 @@ int drawingMemory1[ledsPerStrip*8];
 OctoSK6812 strip(ledsPerStrip, displayMemory, drawingMemory0, drawingMemory1, SK6812_GRBW);
 
 void patternChangeIsr () {
+    long long unsigned int currentTime = millis();
+    if (currentTime < lastDebounceTime + debounceInterval) {
+        return;
+    }
+    lastDebounceTime = currentTime;
+
     patternNumber++;
     if (patternNumber > 1) {
         patternNumber = 0;
