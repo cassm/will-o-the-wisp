@@ -4,12 +4,8 @@
 #include <stdint.h>
 #include "gamma.h"
 
-// FIXME: how to colour correction? Do we even have to? Seems ok.
-//double correctionFactors[] = {0.52, 0.31, 1, 0.8};
-//double correctionFactors[] = {0.62, 0.40, 1, 1};
-//double correctionFactors[] = {0.73, 0.50, 1, 0.8};
-//double correctionFactors[] = {0.94, 0.69, 1, 0.8};
-double correctionFactors[] = {1, 1, 1, 1};
+// correct for non-uniform brightness of LED channels
+double correctionFactors[] = {1, 0.6, 1, 1};
 
 void colourCorrect (uint16_t *rgbwVal) {
     for (int i = 0; i < 4; i++) {
@@ -23,9 +19,35 @@ void gammaCorrect (uint16_t *rgbwVal) {
     }
 }
 
+void gammaCorrect (uint16_t *rgbwVal, float brightnessVal) {
+    float brightnessFactor = brightnessVal / 1024;
+    for (int i = 0; i < 4; i++) {
+        rgbwVal[i] = (int)(gamma_table[(int)(rgbwVal[i]*brightnessFactor)]);
+    }
+}
+
+void gammaCorrect (uint16_t *rgbwVal, uint16_t *outputVal) {
+    for (int i = 0; i < 4; i++) {
+        outputVal[i] = gamma_table[rgbwVal[i]];
+    }
+}
+
+void gammaCorrect (uint16_t *rgbwVal, uint16_t *outputVal, float brightnessVal) {
+    float brightnessFactor = brightnessVal / 1024;
+    for (int i = 0; i < 4; i++) {
+        outputVal[i] = (int)(gamma_table[(int)(rgbwVal[i]*brightnessFactor)]);
+    }
+}
+
 void rescale (uint16_t *rgbwVal) {
     for (int i = 0; i < 4; i++) {
         rgbwVal[i] /= 4;
+    }
+}
+
+void rescale (uint16_t *rgbwVal, uint16_t *outputVal) {
+    for (int i = 0; i < 4; i++) {
+        outputVal[i] = rgbwVal[i] / 4;
     }
 }
 
