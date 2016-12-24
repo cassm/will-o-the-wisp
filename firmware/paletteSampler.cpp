@@ -2,28 +2,10 @@
 #include "paletteSampler.h"
 #include "gamma.h"
 
-void linearInterpolate (uint16_t palette[][4], int paletteLength, double index, uint16_t *sample, bool gammaCorrection) {
-    // handle with negative indices
-    while (index < 0)
-        index += paletteLength;
-
-    index = fmod(index, paletteLength);
-    
-    int lowerIndex = floor(index);
-    int upperIndex = ceil(index);
-
-    // handle wrap case
-    if (upperIndex == paletteLength)
-        upperIndex = 0;
-
-    double interpolation, ratio = index - lowerIndex;
-
-    // pinched from smoothstep algorithm
-    //ratio = (ratio) * (ratio) * (3 - 2 * (ratio));
-
+void linearInterpolate (const uint16_t fromVal[4], const uint16_t toVal[4], double index, uint16_t *sample, bool gammaCorrection) {
     // four colour channels
     for (int i = 0; i < 4; i++) {
-        interpolation = ((1-ratio) * palette[lowerIndex][i]) + (ratio * palette[upperIndex][i]);
+        double interpolation = ((1-index) * fromVal[i]) + (index * toVal[i]);
         if (gammaCorrection) {
             sample[i] = gamma_table[(uint16_t)interpolation];
         }
@@ -34,18 +16,22 @@ void linearInterpolate (uint16_t palette[][4], int paletteLength, double index, 
 }
 
 // use a wrapper function in case we want to add further interpolation options later
-void getPaletteSample (uint16_t palette[][4], int paletteLength, double index, uint16_t *sample, bool interpolate, bool gammaCorrection) {
+void getPaletteSample (const uint16_t palette[][4], int paletteLength, double index, uint16_t *sample, bool interpolate, bool gammaCorrection) {
+    while (index < 0) {
+        index += paletteLength;
+    }
+    index = fmod(index, paletteLength);
+
+    int fromIndex = floor(index);
+    int toIndex = ceil(index);
+    
     if (interpolate) {
-       linearInterpolate (palette, paletteLength, index, sample, gammaCorrection);
+       linearInterpolate (palette[fromIndex], palette[toIndex], fmod(index, 1), sample, gammaCorrection);
     }
 
     else {
-        int intIndex = index;
-        intIndex %= paletteLength;
-
         for (int i = 0; i < 4; i++) {
-            sample[i] = palette[intIndex][i];
+            sample[i] = palette[fromIndex][i];
         }
     }
 }
-
