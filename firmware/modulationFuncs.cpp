@@ -3,23 +3,50 @@
 #include <math.h>
 #include "gamma.h"
 
-void fadePixel (HSI *hsiVal, int fadeRate, float minIntensity) {
-  float newIntensity = ((float)gamma_table[hsiVal->gamma] / 255.0) + minIntensity;
-  //float newIntensity = hsiVal->i > fadeRate+minIntensity ? hsiVal->i - fadeRate : minIntensity;
-  float intensityReduction = hsiVal->i - newIntensity;
-  if (intensityReduction > 0) {
-    float saturationReduction = (intensityReduction / hsiVal->i) * hsiVal->s;
-    hsiVal->s -= saturationReduction;
-  }
-  else {
-    float magicNumber = 0.002; // factor to keep step with gamma_table reduction more or less
-    hsiVal->s -= hsiVal->s > fadeRate*magicNumber ? fadeRate*magicNumber : hsiVal->s;
-  }
-  hsiVal->i = newIntensity;
-  if (hsiVal->gamma > fadeRate)
-    hsiVal->gamma -= fadeRate;
-  else
-    hsiVal->gamma = 0;
+long int nextEventMillis = 0;
+
+void fadePixel (double *hsiVal, double minIntensity, double fadeRate) {
+    float newIntensity = max(hsiVal[2] - fadeRate, minIntensity);
+    float intensityReduction = hsiVal[2] - newIntensity;
+
+    if (intensityReduction > 0) {
+        float saturationReduction = (intensityReduction / hsiVal[2]) * hsiVal[1];
+        hsiVal[1] -= saturationReduction;
+    }
+    else {
+        hsiVal[1] -= hsiVal[1] > fadeRate ? fadeRate : hsiVal[1];
+    }
+
+    hsiVal[2] = newIntensity;
+}
+
+int fadePixel (uint16_t *rgbwVal, const uint16_t *targetVal, uint16_t fadeRate) {
+    int finished = 1;
+
+    for (int i = 0; i < 4; i++) {
+        if (rgbwVal[i] > targetVal[i]) {
+            finished = 0;
+
+            if (rgbwVal[i] - fadeRate < targetVal[i]) {
+                rgbwVal[i] = targetVal[i];
+            }
+            else {
+                rgbwVal[i] -= fadeRate;
+            }
+        }
+        else if (rgbwVal[i] < targetVal[i]) {
+            finished = 0;
+
+            if (rgbwVal[i] + fadeRate > targetVal[i]) {
+                rgbwVal[i] = targetVal[i];
+            }
+            else {
+                rgbwVal[i] += fadeRate;
+            }
+        }
+    }
+
+    return finished;
 }
 
 float logNormalPDF (float x) {
@@ -31,7 +58,6 @@ float doopsFunc (float x) {
 }
 
 bool randomIntervalTimer (int eventInterval) {
-  static long int nextEventMillis = 0;
   long int currentMillis = millis();
 
   if (currentMillis > nextEventMillis) {

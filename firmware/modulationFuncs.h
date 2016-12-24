@@ -3,7 +3,8 @@
 
 #include "hsi.h"
 
-void fadePixel (HSI *hsiVal, int fadeRate, float minIntensity);
+void fadePixel (double *hsiVal, double minIntensity, double fadeRate);
+int fadePixel (uint16_t *rgbwVal, const uint16_t *targetVal, uint16_t fadeRate);
 float logNormalPDF (float x);
 float doopsFunc (float x);
 bool randomIntervalTimer (int eventInterval);
