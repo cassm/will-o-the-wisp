@@ -25,6 +25,7 @@
 // changes made by Mackenzie Hauck nocduro.ca
 
 #include <string.h>
+#include <algorithm>
 #include "OctoSK6812.h"
 
 
@@ -73,8 +74,8 @@ OctoSK6812::OctoSK6812(uint32_t numPerStrip, void *frameBuf, void *drawBuf0, voi
 // have an insight about tuning these parameters AND you have actually tested on
 // real LED strips, please contact paul@pjrc.com.  Please do not email based only
 // on reading the datasheets and purely theoretical analysis.
-#define SK6812_TIMING_T0H  64
-#define SK6812_TIMING_T1H  128
+#define SK6812_TIMING_T0H  60
+#define SK6812_TIMING_T1H  176
 
 // Discussion about timing and flicker & color shift issues:
 // http://forum.pjrc.com/threads/23877-WS2812B-compatible-with-OctoWS2811-library?p=38190&viewfull=1#post38190
@@ -221,10 +222,12 @@ int OctoSK6812::busy(void)
 void OctoSK6812::dither(int iteration)
 {
   uint64_t ditherPattern = 0x00808892aadbeef7;
+  //uint8_t shortDitherPattern = 0x2d;
+  uint16_t shortDitherPattern = 0x156d;
 
-  for (int i = 0; i < 64; i++)
+  for (int i = 0; i < 16; i++)
   {
-    int bitVal = (ditherPattern>>((64-((i/8)*8))+i%8)) & 1;
+    int bitVal = (shortDitherPattern>>((16-((i/8)*8))+i%8)) & 1;
     if (iteration)
     {
       show(bitVal);
@@ -247,6 +250,10 @@ void OctoSK6812::show(int bufNum)
   // it's ok to copy the drawing buffer to the frame buffer
   // during the 50us WS2811 reset time
   if (drawBuffer != frameBuffer) {
+    int bufsize = stripLen * pixelBits;
+    //std::swap(frameBuffer, drawBuffer);
+    //dma2.sourceBuffer((uint8_t *)frameBuffer, bufsize);
+  
     // TODO: this could be faster with DMA, especially if the
     // buffers are 32 bit aligned... but does it matter?
     memcpy(frameBuffer, drawBuffer, stripLen * pixelBits);
@@ -320,6 +327,7 @@ void OctoSK6812::show(int bufNum)
   FTM2_SC = 0x188;
   //digitalWriteFast(9, LOW);
 #endif
+
   //Serial1.print("3");
   interrupts();
   //Serial1.print("4");

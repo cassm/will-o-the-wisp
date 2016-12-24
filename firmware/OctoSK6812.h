@@ -59,10 +59,6 @@ public:
     setPixel(num, (uint8_t)rgbwVal[0], (uint8_t)rgbwVal[1], (uint8_t)rgbwVal[2], (uint8_t)rgbwVal[3], bufNum);
   }
 
-  void setPixelRGB(uint32_t num, uint16_t *rgbVal, int bufNum) {
-    setPixel(num, (uint8_t)rgbVal[0], (uint8_t)rgbVal[1], (uint8_t)rgbVal[2], 0, bufNum);
-  }
-
   int getPixel(uint32_t num, int bufNum);
 
   void dither(int iteration);
