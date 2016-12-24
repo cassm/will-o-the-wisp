@@ -83,6 +83,7 @@ private:
   static void *drawBuffer0;
   static void *drawBuffer1;
   static uint8_t params;
+  uint16_t frameSetDelay;
   static DMAChannel dma1, dma2, dma3;
   static void isr(void);
 };

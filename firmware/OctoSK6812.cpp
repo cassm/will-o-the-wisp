@@ -113,29 +113,57 @@ void OctoSK6812::begin(void)
   pinMode(21, OUTPUT);  // strip #7
   pinMode(5, OUTPUT);  // strip #8
 
-  // create the two waveforms for WS2811 low and high bits
-  //frequency = (params & WS2811_400kHz) ? 400000 : 800000;
   frequency = 800000;
+  frameSetDelay = 50;
+
+#if defined(__MK20DX128__)
+  FTM1_SC = 0;
+  FTM1_CNT = 0;
+  uint32_t mod = (F_BUS + frequency / 2) / frequency;
+  FTM1_MOD = mod - 1;
+  FTM1_SC = FTM_SC_CLKS(1) | FTM_SC_PS(0);
+  FTM1_C0SC = 0x69;
+  FTM1_C1SC = 0x69;
+  FTM1_C0V = (mod * SK6812_TIMING_T0H) >> 8;
+  FTM1_C1V = (mod * SK6812_TIMING_T1H) >> 8;
+  // pin 16 triggers DMA(port B) on rising edge
+  CORE_PIN16_CONFIG = PORT_PCR_IRQC(1)|PORT_PCR_MUX(3);
+  //CORE_PIN4_CONFIG = PORT_PCR_MUX(3); // testing only
+
+#elif defined(__MK20DX256__)
+  FTM2_SC = 0;
+  FTM2_CNT = 0;
+  uint32_t mod = (F_BUS + frequency / 2) / frequency;
+  FTM2_MOD = mod - 1;
+  FTM2_SC = FTM_SC_CLKS(1) | FTM_SC_PS(0);
+  FTM2_C0SC = 0x69;
+  FTM2_C1SC = 0x69;
+  FTM2_C0V = (mod * WS2811_TIMING_T0H) >> 8;
+  FTM2_C1V = (mod * WS2811_TIMING_T1H) >> 8;
+  // pin 32 is FTM2_CH0, PTB18, triggers DMA(port B) on rising edge
+  // pin 25 is FTM2_CH1, PTB19
+  CORE_PIN32_CONFIG = PORT_PCR_IRQC(1)|PORT_PCR_MUX(3);
+  //CORE_PIN25_CONFIG = PORT_PCR_MUX(3); // testing only
+
+#elif defined(__MK64FX512__) || defined(__MK66FX1M0__)
+  FTM2_SC = 0;
+  FTM2_CNT = 0;
+  uint32_t mod = (F_BUS + frequency / 2) / frequency;
+  FTM2_MOD = mod - 1;
+  FTM2_SC = FTM_SC_CLKS(1) | FTM_SC_PS(0);
+  FTM2_C0SC = 0x69;
+  FTM2_C1SC = 0x69;
+  FTM2_C0V = (mod * WS2811_TIMING_T0H) >> 8;
+  FTM2_C1V = (mod * WS2811_TIMING_T1H) >> 8;
+  // FTM2_CH0, PTA10 (not connected), triggers DMA(port A) on rising edge
+  PORTA_PCR10 = PORT_PCR_IRQC(1)|PORT_PCR_MUX(3);
+
+#elif defined(__MKL26Z64__)
   analogWriteResolution(8);
   analogWriteFrequency(3, frequency);
   analogWriteFrequency(4, frequency);
-  analogWrite(3, SK6812_TIMING_T0H);
-  analogWrite(4, SK6812_TIMING_T1H);
-
-#if defined(KINETISK)
-  // pin 16 triggers DMA(port B) on rising edge (configure for pin 3's waveform)
-  CORE_PIN16_CONFIG = PORT_PCR_IRQC(1)|PORT_PCR_MUX(3);
-  pinMode(3, INPUT_PULLUP); // pin 3 no longer needed
-
-  // pin 15 triggers DMA(port C) on falling edge of low duty waveform
-  // pin 15 and 16 must be connected by the user: 16 is output, 15 is input
-  pinMode(15, INPUT);
-  CORE_PIN15_CONFIG = PORT_PCR_IRQC(2)|PORT_PCR_MUX(1);
-
-  // pin 4 triggers DMA(port A) on falling edge of high duty waveform
-  CORE_PIN4_CONFIG = PORT_PCR_IRQC(2)|PORT_PCR_MUX(3);
-
-#elif defined(KINETISL)
+  analogWrite(3, WS2811_TIMING_T0H);
+  analogWrite(4, WS2811_TIMING_T1H);
   // on Teensy-LC, use timer DMA, not pin DMA
   //Serial1.println(FTM2_C0SC, HEX);
   //FTM2_C0SC = 0xA9;
@@ -163,14 +191,14 @@ void OctoSK6812::begin(void)
   dma1.transferCount(bufsize);
   dma1.disableOnCompletion();
 
-  // DMA channel #2 writes the pixel data at 20% of the cycle
+  // DMA channel #2 writes the pixel data at 23% of the cycle
   dma2.sourceBuffer((uint8_t *)frameBuffer, bufsize);
   dma2.destination(GPIOD_PDOR);
   dma2.transferSize(1);
   dma2.transferCount(bufsize);
   dma2.disableOnCompletion();
 
-  // DMA channel #3 clear all the pins low at 48% of the cycle
+  // DMA channel #3 clear all the pins low at 69% of the cycle
   dma3.source(ones);
   dma3.destination(GPIOD_PCOR);
   dma3.transferSize(1);
@@ -178,17 +206,25 @@ void OctoSK6812::begin(void)
   dma3.disableOnCompletion();
   dma3.interruptAtCompletion();
 
-#ifdef __MK20DX256__
-  MCM_CR = MCM_CR_SRAMLAP(1) | MCM_CR_SRAMUAP(0);
-  AXBS_PRS0 = 0x1032;
-#endif
-
-#if defined(KINETISK)
+#if defined(__MK20DX128__)
   // route the edge detect interrupts to trigger the 3 channels
   dma1.triggerAtHardwareEvent(DMAMUX_SOURCE_PORTB);
-  dma2.triggerAtHardwareEvent(DMAMUX_SOURCE_PORTC);
-  dma3.triggerAtHardwareEvent(DMAMUX_SOURCE_PORTA);
-#elif defined(KINETISL)
+  dma2.triggerAtHardwareEvent(DMAMUX_SOURCE_FTM1_CH0);
+  dma3.triggerAtHardwareEvent(DMAMUX_SOURCE_FTM1_CH1);
+  DMAPriorityOrder(dma3, dma2, dma1);
+#elif defined(__MK20DX256__)
+  // route the edge detect interrupts to trigger the 3 channels
+  dma1.triggerAtHardwareEvent(DMAMUX_SOURCE_PORTB);
+  dma2.triggerAtHardwareEvent(DMAMUX_SOURCE_FTM2_CH0);
+  dma3.triggerAtHardwareEvent(DMAMUX_SOURCE_FTM2_CH1);
+  DMAPriorityOrder(dma3, dma2, dma1);
+#elif defined(__MK64FX512__) || defined(__MK66FX1M0__)
+  // route the edge detect interrupts to trigger the 3 channels
+  dma1.triggerAtHardwareEvent(DMAMUX_SOURCE_PORTA);
+  dma2.triggerAtHardwareEvent(DMAMUX_SOURCE_FTM2_CH0);
+  dma3.triggerAtHardwareEvent(DMAMUX_SOURCE_FTM2_CH1);
+  DMAPriorityOrder(dma3, dma2, dma1);
+#elif defined(__MKL26Z64__)
   // route the timer interrupts to trigger the 3 channels
   dma1.triggerAtHardwareEvent(DMAMUX_SOURCE_FTM2_OV);
   dma2.triggerAtHardwareEvent(DMAMUX_SOURCE_FTM2_CH0);
@@ -215,7 +251,7 @@ int OctoSK6812::busy(void)
 {
   if (update_in_progress) return 1;
   // busy for 50 us after the done interrupt, for WS2811 reset
-  if (micros() - update_completed_at < 50) return 1;
+  if (micros() - update_completed_at < frameSetDelay) return 1;
   return 0;
 }
 
@@ -259,7 +295,7 @@ void OctoSK6812::show(int bufNum)
     memcpy(frameBuffer, drawBuffer, stripLen * pixelBits);
   }
   // wait for WS2811 reset
-  while (micros() - update_completed_at < 50) ;
+  while (micros() - update_completed_at < frameSetDelay) ;
 
 #if defined(KINETISK)
   // ok to start, but we must be very careful to begin
