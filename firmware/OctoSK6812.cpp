@@ -261,9 +261,10 @@ void OctoSK6812::dither(int iteration)
   //uint8_t shortDitherPattern = 0x2d;
   uint16_t shortDitherPattern = 0x156d;
 
-  for (int i = 0; i < 16; i++)
+  for (int i = 0; i < 64; i++)
   {
-    int bitVal = (shortDitherPattern>>((16-((i/8)*8))+i%8)) & 1;
+    //int bitVal = (shortDitherPattern>>((16-((i/8)*8))+i%8)) & 1;
+    int bitVal = (ditherPattern>>((64-((i/8)*8))+i%8)) & 1;
     if (iteration)
     {
       show(bitVal);
@@ -287,12 +288,12 @@ void OctoSK6812::show(int bufNum)
   // during the 50us WS2811 reset time
   if (drawBuffer != frameBuffer) {
     int bufsize = stripLen * pixelBits;
-    //std::swap(frameBuffer, drawBuffer);
-    //dma2.sourceBuffer((uint8_t *)frameBuffer, bufsize);
+    std::swap(frameBuffer, drawBuffer);
+    dma2.sourceBuffer((uint8_t *)frameBuffer, bufsize);
   
     // TODO: this could be faster with DMA, especially if the
     // buffers are 32 bit aligned... but does it matter?
-    memcpy(frameBuffer, drawBuffer, stripLen * pixelBits);
+    //memcpy(frameBuffer, drawBuffer, stripLen * pixelBits);
   }
   // wait for WS2811 reset
   while (micros() - update_completed_at < frameSetDelay) ;
