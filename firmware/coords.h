@@ -3,6 +3,8 @@
 
 #include <math.h>
 
+enum formFactor { DODECAHEDRON, TUBE };
+
 double phis[] = { 0.68068,  0.24435,  6.03884,  5.60250,  0.00000,
 1.04720,  1.41372,  1.23918,  0.85521,  0.68068,
 1.41372,  2.09439,  2.77507,  2.33874,  1.85005,
@@ -31,16 +33,24 @@ double thetas[] = {0.73304,  1.13446,  1.01229,  0.34907,  0.24435,
 
 double lantern_r = 1;
 
-double getX (int index) {
+double getSphericalX (int index) {
     return lantern_r * sin(phis[index]) * cos(thetas[index]);
 }
 
-double getY (int index) {
+double getSphericalY (int index) {
     return lantern_r * sin(phis[index]) * sin(thetas[index]);
 }
 
-double getZ (int index) {
+double getSphericalZ (int index) {
     return lantern_r * cos(phis[index]);
+}
+
+double getCylindricalX (int index) {
+    if (index == 0) {
+        return -0.5;
+    }
+
+    return ((float)index / 31) - 0.5;
 }
 
 #endif
