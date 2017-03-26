@@ -3,6 +3,7 @@
 from __future__ import division
 import time
 import math
+from PIL import Image
 import sys
 import os
 
@@ -12,7 +13,9 @@ sys.path.insert(0, cwd+"/openpixelcontrol/python")
 import opc
 import color_utils
 import rgbw_utils
+import coords
 
+simulate = True
 
 #-------------------------------------------------------------------------------
 # handle command line
@@ -28,7 +31,6 @@ Usage: lantern_control.py [ip:port]
 If not set, ip:port defauls to 127.0.0.1:7890
 ''')
     sys.exit(0)
-
 
 #-------------------------------------------------------------------------------
 # connect to server
@@ -48,29 +50,32 @@ print('')
 print('    sending pixels forever (control-c to exit)...')
 print('')
 
-n_pixels = 120  # number of pixels in the included "wall" layout
+n_pixels = 180  # number of pixels in the included "wall" layout
 buffer_size = rgbw_utils.get_buffer_size(n_pixels)
 fps = 60         # frames per second
 
-# print "n pixels = {} buffer size = {}".format(n_pixels, buffer_size)
-# how many sine wave cycles are squeezed into our n_pixels
-# 24 happens to create nice diagonal stripes on the wall layout
-freq_r = 24
-freq_g = 24
-freq_b = 24
-freq_w = 24
+pixel_buffer = [[0.0, 0.0, 0.0] for i in range(buffer_size)]
+pixels = [[0.0, 0.0, 0.0, 0.0] for i in range(n_pixels)]
 
-# how many seconds the color sine waves take to shift through a complete cycle
-speed_r = 7
-speed_g = -13
-speed_b = 19
-speed_w = 23
+def x_sin(pixels):
+    for ii in range(n_pixels):
+        offsets = [0.1, 0.2, 0.0, 0.3]
+        pixels[ii] =  tuple(math.sin(coords.globalCartesian[ii][0] + time.time()/3 + offset)*256 for offset in offsets)
 
-pixels = [[0.0, 0.0, 0.0] for i in range(buffer_size)]
+def loot_cave(pixels):
+    # how many sine wave cycles are squeezed into our n_pixels
+    # 24 happens to create nice diagonal stripes on the wall layout
+    freq_r = 24
+    freq_g = 24
+    freq_b = 24
+    freq_w = 24
 
-start_time = time.time()
-while True:
-    t = (time.time() - start_time) * 5
+    # how many seconds the color sine waves take to shift through a complete cycle
+    speed_r = 7
+    speed_g = -13
+    speed_b = 19
+    speed_w = 23
+
     for ii in range(n_pixels):
         pct = (ii / n_pixels)
         # diagonal black stripes
@@ -83,8 +88,19 @@ while True:
         g = blackstripes * color_utils.remap(math.cos((t/speed_g + pct*freq_g)*math.pi*2), -1, 1, 0, 256)
         b = blackstripes * color_utils.remap(math.cos((t/speed_b + pct*freq_b)*math.pi*2), -1, 1, 0, 256)
         w = blackstripes * color_utils.remap(math.cos((t/speed_w + pct*freq_w)*math.pi*2), -1, 1, 0, 256)
-        newPixel = (g, r, b, w)
-        rgbw_utils.set_pixel(pixels, ii, newPixel)
-    client.put_pixels(pixels, channel=0)
-    time.sleep(1 / fps)
+        pixels[ii] = (g, r, b, w)
 
+start_time = time.time()
+while True:
+    t = (time.time() - start_time) * 5
+    # loot_cave(pixels)
+    x_sin(pixels)
+
+    for ii, pixel in enumerate(pixels):
+        if simulate:
+            rgbw_utils.simulate_pixel(pixel_buffer, ii, pixel)
+        else:
+            rgbw_utils.set_pixel(pixel_buffer, ii, pixel)
+
+    client.put_pixels(pixel_buffer, channel=0)
+    time.sleep(1 / fps)
