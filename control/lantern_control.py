@@ -13,6 +13,8 @@ sys.path.insert(0, cwd+"/openpixelcontrol/python")
 import opc
 import color_utils
 import rgbw_utils
+
+execfile("coordGen.py")
 import coords
 
 simulate = True
