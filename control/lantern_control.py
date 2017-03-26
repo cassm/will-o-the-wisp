@@ -3,10 +3,12 @@
 from __future__ import division
 import time
 import math
+import glob
 from PIL import Image
 import sys
 import os
 
+# add openpixel python path
 cwd = os.getcwd()
 sys.path.insert(0, cwd+"/openpixelcontrol/python")
 
@@ -14,10 +16,33 @@ import opc
 import color_utils
 import rgbw_utils
 
+# generate coordinates
 execfile("coordGen.py")
 import coords
 
 simulate = True
+
+# grab palettes
+palettePath = cwd+"/../palettes/"
+paletteExtension = ".bmp"
+paletteFiles = glob.glob(palettePath + "*" + paletteExtension)
+
+paletteNames = list((fileName[len(palettePath):-len(paletteExtension)], fileName) for fileName in paletteFiles)
+palettes = {}
+
+for title, path in paletteNames:
+    im = Image.open(path, "r")
+    width, height = im.size
+    rgbwVals = []
+    for pixel in range(width):
+        r, g, b = im.getpixel((pixel, 1))
+        w = min((r, g, b))
+        rgbwVals.append((g-w, r-w, b-w, w))
+    maxVal = max(map(max, rgbwVals))
+    brightnessFactor = 255/maxVal
+    correctedRgbwVals = tuple(tuple(channel*brightnessFactor for channel in pixel) for pixel in rgbwVals)
+    palettes[title] = correctedRgbwVals
+
 
 #-------------------------------------------------------------------------------
 # handle command line
@@ -64,6 +89,10 @@ def x_sin(pixels):
         offsets = [0.1, 0.2, 0.0, 0.3]
         pixels[ii] =  tuple(math.sin(coords.globalCartesian[ii][0] + time.time()/3 + offset)*256 for offset in offsets)
 
+def unicornBarf(pixels):
+    for ii in range(n_pixels):
+        pixels[ii] = palettes["unicornBarf"][int((time.time()*15 + coords.globalCartesian[ii][0]*10) % len(palettes["unicornBarf"]))]
+
 def loot_cave(pixels):
     # how many sine wave cycles are squeezed into our n_pixels
     # 24 happens to create nice diagonal stripes on the wall layout
@@ -96,7 +125,8 @@ start_time = time.time()
 while True:
     t = (time.time() - start_time) * 5
     # loot_cave(pixels)
-    x_sin(pixels)
+    # x_sin(pixels)
+    unicornBarf(pixels)
 
     for ii, pixel in enumerate(pixels):
         if simulate:
