@@ -1,0 +1,14 @@
+[Unit]
+Description=Lantern control script
+After=multi-user.target fcserver.service
+
+[Service]
+Type=simple
+ExecStart=/home/pi/src/will-o-the-wisp/control/lantern_control.py
+User=pi
+WorkingDirectory=/home/pi/src/will-o-the-wisp/control/
+StandardOutput=journal+console
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

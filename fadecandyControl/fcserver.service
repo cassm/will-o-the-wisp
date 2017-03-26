@@ -1,0 +1,10 @@
+[Unit]
+Description=fadecandy server
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/fcserver /home/pi/src/will-o-the-wisp/control/fclayout.json
+
+[Install]
+WantedBy=multi-user.target
