@@ -77,7 +77,7 @@ print('')
 print('    sending pixels forever (control-c to exit)...')
 print('')
 
-n_pixels = 180  # number of pixels in the included "wall" layout
+n_pixels = 60 * len(coords.localCartesian) # 60 leds per lantern
 buffer_size = rgbw_utils.get_buffer_size(n_pixels)
 fps = 60         # frames per second
 
