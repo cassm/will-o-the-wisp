@@ -89,9 +89,10 @@ def x_sin(pixels):
         offsets = [0.1, 0.2, 0.0, 0.3]
         pixels[ii] =  tuple(math.sin(coords.globalCartesian[ii][0] + time.time()/3 + offset)*256 for offset in offsets)
 
-def unicornBarf(pixels):
+def paletteViewer(pixels, paletteName, timeFactor, spaceFactor):
     for ii in range(n_pixels):
-        pixels[ii] = palettes["unicornBarf"][int((time.time()*15 + coords.globalCartesian[ii][0]*10) % len(palettes["unicornBarf"]))]
+        spaceSum = sum(tuple(globalCartesian[ii][component] * spaceFactor[component] for component in range(3)))
+        pixels[ii] = palettes[paletteName][int((time.time()*timeFactor + spaceSum) % len(palettes[paletteName]))]
 
 def loot_cave(pixels):
     # how many sine wave cycles are squeezed into our n_pixels
@@ -126,7 +127,7 @@ while True:
     t = (time.time() - start_time) * 5
     # loot_cave(pixels)
     # x_sin(pixels)
-    unicornBarf(pixels)
+    paletteViewer(pixels, "stressTest", 25, (10, 0, 0))
 
     for ii, pixel in enumerate(pixels):
         if simulate:
