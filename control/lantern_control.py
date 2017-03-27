@@ -4,6 +4,7 @@ from __future__ import division
 import time
 import math
 import glob
+import random
 from PIL import Image
 import sys
 import os
@@ -123,11 +124,19 @@ def loot_cave(pixels):
         pixels[ii] = (g, r, b, w)
 
 start_time = time.time()
+start_time = time.time()
+currentPalette = random.choice(palettes.keys())
+paletteTimer = time.time()
+
 while True:
+    if time.time() - paletteTimer > 240:
+        currentPalette = random.choice(palettes.keys())
+        paletteTimer = time.time()
+
     t = (time.time() - start_time) * 5
     # loot_cave(pixels)
     # x_sin(pixels)
-    paletteViewer(pixels, "stressTest", 25, (10, 0, 0))
+    paletteViewer(pixels, currentPalette, 25, (100, 0, 0))
 
     for ii, pixel in enumerate(pixels):
         if simulate:
