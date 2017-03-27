@@ -35,7 +35,7 @@ for title, path in paletteNames:
     width, height = im.size
     rgbwVals = []
     for pixel in range(width):
-        r, g, b = im.getpixel((pixel, 1))
+        r, g, b = im.getpixel((pixel, 0))
         w = min((r, g, b))
         rgbwVals.append((g-w, r-w, b-w, w))
     maxVal = max(map(max, rgbwVals))
