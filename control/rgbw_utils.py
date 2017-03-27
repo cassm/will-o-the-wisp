@@ -9,5 +9,7 @@ def simulate_pixel(pixel_buffer, pixel_index, rgbw_val):
 
 def set_pixel(pixel_buffer, pixel_index, rgbw_val):
     for index, value in enumerate(rgbw_val):
+        if index == 0:
+            value *= 0.6
         channel_index = pixel_index*4 + index
         pixel_buffer[int(math.floor(channel_index/3))][int(channel_index%3)] = value
