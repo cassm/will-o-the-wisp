@@ -90,12 +90,12 @@ def x_sin(pixels):
         offsets = [0.1, 0.2, 0.0, 0.3]
         pixels[ii] =  tuple(math.sin(coords.globalCartesian[ii][0] + time.time()/3 + offset)*256 for offset in offsets)
 
-def paletteViewer(pixels, paletteName, timeFactor, spaceFactor):
-    for ii in range(n_pixels):
+def paletteViewer(pixels, paletteName, timeFactor, spaceFactor, start_pixel, end_pixel):
+    for ii in range(start_pixel, end_pixel):
         spaceSum = sum(tuple(globalCartesian[ii][component] * spaceFactor[component] for component in range(3)))
-        pixels[ii] = palettes[paletteName][int((time.time()*timeFactor + spaceSum) % len(palettes[paletteName]))]
+        rgbw_utils.set_pixel(pixels, ii, palettes[paletteName][int((time.time()*timeFactor + spaceSum) % len(palettes[paletteName]))])
 
-def loot_cave(pixels):
+def loot_cave(pixels, start_pixel, end_pixel):
     # how many sine wave cycles are squeezed into our n_pixels
     # 24 happens to create nice diagonal stripes on the wall layout
     freq_r = 24
@@ -109,7 +109,7 @@ def loot_cave(pixels):
     speed_b = 19
     speed_w = 23
 
-    for ii in range(n_pixels):
+    for ii in range(start_pixel, end_pixel):
         pct = (ii / n_pixels)
         # diagonal black stripes
         pct_jittered = (pct * 77) % 37
@@ -121,7 +121,7 @@ def loot_cave(pixels):
         g = blackstripes * color_utils.remap(math.cos((t/speed_g + pct*freq_g)*math.pi*2), -1, 1, 0, 256)
         b = blackstripes * color_utils.remap(math.cos((t/speed_b + pct*freq_b)*math.pi*2), -1, 1, 0, 256)
         w = blackstripes * color_utils.remap(math.cos((t/speed_w + pct*freq_w)*math.pi*2), -1, 1, 0, 256)
-        pixels[ii] = (g, r, b, w)
+        rgbw_utils.set_pixel(pixels, ii, (g, r, b, w))
 
 start_time = time.time()
 start_time = time.time()
@@ -134,15 +134,15 @@ while True:
         paletteTimer = time.time()
 
     t = (time.time() - start_time) * 5
-    # loot_cave(pixels)
     # x_sin(pixels)
-    paletteViewer(pixels, currentPalette, 25, (100, 0, 0))
+    loot_cave(pixel_buffer, 60, 120)
+    paletteViewer(pixel_buffer, currentPalette, 25, (100, 0, 0), 0, 60)
 
-    for ii, pixel in enumerate(pixels):
-        if simulate:
-            rgbw_utils.simulate_pixel(pixel_buffer, ii, pixel)
-        else:
-            rgbw_utils.set_pixel(pixel_buffer, ii, pixel)
+    # for ii, pixel in enumerate(pixels):
+        # if simulate:
+            # rgbw_utils.simulate_pixel(pixel_buffer, ii, pixel)
+        # else:
+            # rgbw_utils.set_pixel(pixel_buffer, ii, pixel)
 
     client.put_pixels(pixel_buffer, channel=0)
     time.sleep(1 / fps)
