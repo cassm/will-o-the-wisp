@@ -102,7 +102,7 @@ def x_sin(pixels):
             rgbw_utils.set_pixel(pixels, ii, pixel)
 
 
-def paletteViewer(pixels, paletteName, timeFactor, spaceFactor, start_pixel, end_pixel):
+def paletteViewer(pixels, paletteName, timeFactor, spaceFactor, start_pixel = 0, end_pixel = n_pixels):
     for ii in range(start_pixel, end_pixel):
         spaceSum = sum(tuple(globalCartesian[ii][component] * spaceFactor[component] for component in range(3)))
         if simulate:
@@ -110,7 +110,7 @@ def paletteViewer(pixels, paletteName, timeFactor, spaceFactor, start_pixel, end
         else:
             rgbw_utils.set_pixel(pixels, ii, palettes[paletteName][int((time.time()*timeFactor + spaceSum) % len(palettes[paletteName]))])
 
-def loot_cave(pixels, start_pixel, end_pixel):
+def loot_cave(pixels, start_pixel = 0, end_pixel = n_pixels):
     # how many sine wave cycles are squeezed into our n_pixels
     # 24 happens to create nice diagonal stripes on the wall layout
     freq_r = 24
