@@ -79,21 +79,36 @@ print('    sending pixels forever (control-c to exit)...')
 print('')
 
 n_pixels = 60 * len(coords.localCartesian) # 60 leds per lantern
+print "num lanterns = " + str(len(coords.localCartesian))
+print "num LEDs = " + str(n_pixels)
+
 buffer_size = rgbw_utils.get_buffer_size(n_pixels)
+
+if simulate:
+    buffer_size = n_pixels
+
 fps = 60         # frames per second
 
 pixel_buffer = [[0.0, 0.0, 0.0] for i in range(buffer_size)]
-pixels = [[0.0, 0.0, 0.0, 0.0] for i in range(n_pixels)]
 
 def x_sin(pixels):
     for ii in range(n_pixels):
         offsets = [0.1, 0.2, 0.0, 0.3]
-        pixels[ii] =  tuple(math.sin(coords.globalCartesian[ii][0] + time.time()/3 + offset)*256 for offset in offsets)
+        pixel =  tuple(math.sin(coords.globalCartesian[ii][0] + time.time()/3 + offset)*256 for offset in offsets)
+
+        if simulate:
+            rgbw_utils.simulate_pixel(pixels, ii, pixel)
+        else:
+            rgbw_utils.set_pixel(pixels, ii, pixel)
+
 
 def paletteViewer(pixels, paletteName, timeFactor, spaceFactor, start_pixel, end_pixel):
     for ii in range(start_pixel, end_pixel):
         spaceSum = sum(tuple(globalCartesian[ii][component] * spaceFactor[component] for component in range(3)))
-        rgbw_utils.set_pixel(pixels, ii, palettes[paletteName][int((time.time()*timeFactor + spaceSum) % len(palettes[paletteName]))])
+        if simulate:
+            rgbw_utils.simulate_pixel(pixels, ii, palettes[paletteName][int((time.time()*timeFactor + spaceSum) % len(palettes[paletteName]))])
+        else:
+            rgbw_utils.set_pixel(pixels, ii, palettes[paletteName][int((time.time()*timeFactor + spaceSum) % len(palettes[paletteName]))])
 
 def loot_cave(pixels, start_pixel, end_pixel):
     # how many sine wave cycles are squeezed into our n_pixels
@@ -121,7 +136,11 @@ def loot_cave(pixels, start_pixel, end_pixel):
         g = blackstripes * color_utils.remap(math.cos((t/speed_g + pct*freq_g)*math.pi*2), -1, 1, 0, 256)
         b = blackstripes * color_utils.remap(math.cos((t/speed_b + pct*freq_b)*math.pi*2), -1, 1, 0, 256)
         w = blackstripes * color_utils.remap(math.cos((t/speed_w + pct*freq_w)*math.pi*2), -1, 1, 0, 256)
-        rgbw_utils.set_pixel(pixels, ii, (g, r, b, w))
+
+        if simulate:
+            rgbw_utils.simulate_pixel(pixels, ii, (g, r, b, w))
+        else:
+            rgbw_utils.set_pixel(pixels, ii, (g, r, b, w))
 
 start_time = time.time()
 start_time = time.time()
