@@ -142,6 +142,19 @@ def loot_cave(pixels, start_pixel = 0, end_pixel = n_pixels):
         else:
             rgbw_utils.set_pixel(pixels, ii, (g, r, b, w))
 
+def star_drive(pixels, spaceFactor, flashSpeed, colourSpeed, paletteName, start_pixel = 0, end_pixel = n_pixels):
+    for ii in range(n_pixels):
+        spaceSum = sum(tuple(coords.globalCartesian[ii][component] * spaceFactor[component] for component in range(3)))
+        mixLevel = (math.sin(spaceSum + time.time()*flashSpeed - 0.5)/2) + 0.5
+        paletteIndex = int(time.time() * colourSpeed) % len(palettes[paletteName])
+        newVal = list(mixLevel * channel for channel in palettes[paletteName][paletteIndex])
+        newVal[3] = (math.sin(spaceSum + time.time()*flashSpeed) * 0.75 + 0.25) * 512
+
+        if simulate:
+            rgbw_utils.simulate_pixel(pixels, ii, newVal)
+        else:
+            rgbw_utils.set_pixel(pixels, ii, newVal)
+
 start_time = time.time()
 start_time = time.time()
 currentPalette = random.choice(palettes.keys())
@@ -153,15 +166,11 @@ while True:
         paletteTimer = time.time()
 
     t = (time.time() - start_time) * 5
-    # x_sin(pixels)
-    loot_cave(pixel_buffer, 60, 120)
-    paletteViewer(pixel_buffer, currentPalette, 25, (100, 0, 0), 0, 60)
-
-    # for ii, pixel in enumerate(pixels):
-        # if simulate:
-            # rgbw_utils.simulate_pixel(pixel_buffer, ii, pixel)
-        # else:
-            # rgbw_utils.set_pixel(pixel_buffer, ii, pixel)
+    # x_sin(pixel_buffer)
+    # loot_cave(pixel_buffer)
+    # paletteViewer(pixel_buffer, currentPalette, 25, (-10, 0, 0))
+    # star_drive(pixel_buffer, (-0.25, 0, 0), 2, 50, "unicornBarf")
+    star_drive(pixel_buffer, (-0.25, 0, 0), 2, 50, "unicornBarf")
 
     client.put_pixels(pixel_buffer, channel=0)
     time.sleep(1 / fps)
