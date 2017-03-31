@@ -21,7 +21,7 @@ import rgbw_utils
 execfile("coordGen.py")
 import coords
 
-simulate = False
+simulate = True
 
 # grab palettes
 palettePath = cwd+"/../palettes/"
@@ -78,7 +78,8 @@ print('')
 print('    sending pixels forever (control-c to exit)...')
 print('')
 
-n_pixels = 60 * len(coords.localCartesian) # 60 leds per lantern
+pixels_per_lantern = 60
+n_pixels = pixels_per_lantern * len(coords.localCartesian) # 60 leds per lantern
 print "num lanterns = " + str(len(coords.localCartesian))
 print "num LEDs = " + str(n_pixels)
 
@@ -96,19 +97,13 @@ def x_sin(pixels):
         offsets = [0.1, 0.2, 0.0, 0.3]
         pixel =  tuple(math.sin(coords.globalCartesian[ii][0] + time.time()/3 + offset)*256 for offset in offsets)
 
-        if simulate:
-            rgbw_utils.simulate_pixel(pixels, ii, pixel)
-        else:
-            rgbw_utils.set_pixel(pixels, ii, pixel)
+        rgbw_utils.set_pixel(pixels, ii, pixel, simulate)
 
 
 def paletteViewer(pixels, paletteName, timeFactor, spaceFactor, start_pixel = 0, end_pixel = n_pixels):
     for ii in range(start_pixel, end_pixel):
         spaceSum = sum(tuple(globalCartesian[ii][component] * spaceFactor[component] for component in range(3)))
-        if simulate:
-            rgbw_utils.simulate_pixel(pixels, ii, palettes[paletteName][int((time.time()*timeFactor + spaceSum) % len(palettes[paletteName]))])
-        else:
-            rgbw_utils.set_pixel(pixels, ii, palettes[paletteName][int((time.time()*timeFactor + spaceSum) % len(palettes[paletteName]))])
+        rgbw_utils.set_pixel(pixels, ii, palettes[paletteName][int((time.time()*timeFactor + spaceSum) % len(palettes[paletteName]))], simulate)
 
 def loot_cave(pixels, start_pixel = 0, end_pixel = n_pixels):
     # how many sine wave cycles are squeezed into our n_pixels
@@ -137,10 +132,7 @@ def loot_cave(pixels, start_pixel = 0, end_pixel = n_pixels):
         b = blackstripes * color_utils.remap(math.cos((t/speed_b + pct*freq_b)*math.pi*2), -1, 1, 0, 256)
         w = blackstripes * color_utils.remap(math.cos((t/speed_w + pct*freq_w)*math.pi*2), -1, 1, 0, 256)
 
-        if simulate:
-            rgbw_utils.simulate_pixel(pixels, ii, (g, r, b, w))
-        else:
-            rgbw_utils.set_pixel(pixels, ii, (g, r, b, w))
+        rgbw_utils.set_pixel(pixels, ii, (g, r, b, w), simulate)
 
 def star_drive(pixels, spaceFactor, flashSpeed, colourSpeed, paletteName, start_pixel = 0, end_pixel = n_pixels):
     for ii in range(n_pixels):
@@ -150,27 +142,81 @@ def star_drive(pixels, spaceFactor, flashSpeed, colourSpeed, paletteName, start_
         newVal = list(mixLevel * channel for channel in palettes[paletteName][paletteIndex])
         newVal[3] = (math.sin(spaceSum + time.time()*flashSpeed) * 0.75 + 0.25) * 512
 
-        if simulate:
-            rgbw_utils.simulate_pixel(pixels, ii, newVal)
-        else:
-            rgbw_utils.set_pixel(pixels, ii, newVal)
+        rgbw_utils.set_pixel(pixels, ii, newVal, simulate)
+
+def vertical_star_drive(pixels, localSpaceFactor, lanternSpaceFactor, flashSpeed, colourSpeed, paletteName, start_pixel = 0, end_pixel = n_pixels):
+    for ii in range(n_pixels):
+        lanternId = int(ii / pixels_per_lantern)
+        pixelId = ii % pixels_per_lantern
+
+        localSpaceSum = sum(tuple(coords.localCartesian[lanternId][pixelId][component] * localSpaceFactor[component] for component in range(3)))
+        lanternSpaceSum = sum(tuple(coords.lanternLocations[lanternId][component] * lanternSpaceFactor[component] for component in range(3)))
+        cyclePoint = lanternSpaceSum + localSpaceSum + time.time()*flashSpeed
+
+        paletteIndex = int(time.time() * colourSpeed) % len(palettes[paletteName])
+        mixLevel = (math.sin(cyclePoint - 0.5)/2) + 0.5
+
+        newVal = list(mixLevel * channel for channel in palettes[paletteName][paletteIndex])
+        newVal[3] = (math.sin(cyclePoint) * 0.75 + 0.25) * 255
+
+        rgbw_utils.set_pixel(pixels, ii, newVal, simulate)
+
+def fade_from_to(from_val, to_val, rate):
+    result = []
+    for i in range(4):
+        result.append(from_val[i] + (to_val[i]-from_val[i])*rate)
+
+    return result
+
+next_drop = [0.0 for i in range(len(coords.lanternLocations))]
+
+def rain(pixels, rainInterval, shimmerLevel):
+    global next_drop
+
+    for ii in range(n_pixels):
+        r = math.sin(time.time()/-1 + originDelta[ii]*5) * shimmerLevel
+        g = math.sin(time.time()/-2 + originDelta[ii]*5) * shimmerLevel
+        b = math.sin(time.time()/-3 + originDelta[ii]*5) * shimmerLevel
+
+        new_value = fade_from_to(rgbw_utils.get_pixel(pixels, ii, simulate), (g, r, b, 128 - sum((g, r, b))), 0.05)
+
+        rgbw_utils.set_pixel(pixels, ii, new_value, simulate)
+
+    for lantern in range(len(coords.lanternLocations)):
+        if time.time() > next_drop[lantern]:
+            next_drop[lantern] = random.gauss(time.time()+rainInterval, rainInterval/8)
+            pixel_index = lantern*pixels_per_lantern + random.randrange(pixels_per_lantern)
+            rgbw_val = []
+            for colour in range(4):
+                rgbw_val.append(random.gauss(255, 16))
+
+            rgbw_utils.set_pixel(pixels, pixel_index, rgbw_val, simulate)
+
+def colourWaves(pixels, palette, timeSpeed, colourSpeed):
+    for ii in range(n_pixels):
+        w_level = math.sin(time.time()*-2*timeSpeed + coords.originDelta[ii] * 15) * (math.sin(time.time()/-2 + originDelta[ii]/4)+3)*16
+        mix_level = (math.sin(time.time()/-4 + coords.originDelta[ii]/8)+2) / 3
+        palette_index = int((time.time()*-20*timeSpeed + coords.originDelta[ii]*20*colourSpeed) % len(palettes[palette]))
+        rgbw_val = list(channel * mix_level for channel in palettes[palette][palette_index])
+        rgbw_val[3] += w_level
+        rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate)
 
 start_time = time.time()
-start_time = time.time()
-currentPalette = random.choice(palettes.keys())
+# currentPalette = random.choice(palettes.keys())
+currentPalette = "unicornBarf"
 paletteTimer = time.time()
 
 while True:
-    if time.time() - paletteTimer > 240:
-        currentPalette = random.choice(palettes.keys())
-        paletteTimer = time.time()
+    # if time.time() - paletteTimer > 240:
+        # currentPalette = random.choice(palettes.keys())
+        # paletteTimer = time.time()
 
     t = (time.time() - start_time) * 5
-    # x_sin(pixel_buffer)
     # loot_cave(pixel_buffer)
     # paletteViewer(pixel_buffer, currentPalette, 25, (-10, 0, 0))
-    # star_drive(pixel_buffer, (-0.25, 0, 0), 2, 50, "unicornBarf")
-    star_drive(pixel_buffer, (-0.25, 0, 0), 2, 50, "unicornBarf")
+    # vertical_star_drive(pixel_buffer, (0.0, 0.0, -1.0), (0.0, 0.0, 2.0), 1, 50, "unicornBarf")
+    # rain(pixel_buffer, 0.25, 8)
+    colourWaves(pixel_buffer, "stressTest", 1, 1)
 
     client.put_pixels(pixel_buffer, channel=0)
     time.sleep(1 / fps)
