@@ -27,6 +27,7 @@ lanternLocations = ((0.0, 0.0, 0.0),
                     (7.1, -1.6, -0.8), (7.1, 1.6, -0.8))
 lanternRadii = (0.25, 0.2, 0.2, 0.2, 0.2, 0.15, 0.15, 0.15, 0.15)
 globalCartesian = []
+originDelta = []
 localCartesian = []
 sphericalRadians = []
 
@@ -45,11 +46,12 @@ for lanternIndex, location in enumerate(lanternLocations):
 
         lanternCartesian.append((x, y, z))
         globalCartesian.append((location[0] + x, location[1] + y, location[2] + z))
+        originDelta.append(math.sqrt((location[0] + x)**2 + (location[1] + y)**2 + (location[2] + z)**2))
 
     localCartesian.append(lanternCartesian)
 
 f = open("coords.py", "w")
-f.write("spherical = " + str(sphericalRadians) + "\n\nglobalCartesian = " + str(globalCartesian) + "\n\nlocalCartesian = " + str(localCartesian) + "\n")
+f.write("spherical = " + str(sphericalRadians) + "\n\nglobalCartesian = " + str(globalCartesian) + "\n\noriginDelta = " + str(originDelta) + "\n\nlocalCartesian = " + str(localCartesian) + "\n\nlanternLocations = " + str(lanternLocations) + "\n")
 f.close()
 
 f = open("lanterns.json", "w")
