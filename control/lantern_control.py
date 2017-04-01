@@ -227,8 +227,8 @@ while True:
     # paletteViewer(pixel_buffer, currentPalette, 25, (-10, 0, 0))
     # vertical_star_drive(pixel_buffer, (0.0, 0.0, -1.0), (0.0, 0.0, 2.0), 1, 50, "unicornBarf")
     # rain(pixel_buffer, 0.25, 8)
-    shimmer(pixel_buffer, 64, 255)
-    # colourWaves(pixel_buffer, "stressTest", 1, 1)
+    # shimmer(pixel_buffer, 64, 255)
+    colourWaves(pixel_buffer, "stressTest", 1, 1)
 
     client.put_pixels(pixel_buffer, channel=0)
     time.sleep(1 / fps)
