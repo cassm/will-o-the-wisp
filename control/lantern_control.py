@@ -21,7 +21,7 @@ import rgbw_utils
 execfile("coordGen.py")
 import coords
 
-simulate = True
+simulate = False
 
 # grab palettes
 palettePath = cwd+"/../palettes/"
