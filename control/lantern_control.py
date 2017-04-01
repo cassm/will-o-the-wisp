@@ -201,6 +201,17 @@ def colourWaves(pixels, palette, timeSpeed, colourSpeed):
         rgbw_val[3] += w_level
         rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate)
 
+def shimmer(pixels, shimmerLevel, whiteLevel):
+    for ii in range(n_pixels):
+        # shimmerLevel = shimmerLevel * (((math.sin(time.time()/-2.5 + originDelta[ii]*0.5)+1)/2) + (math.sin(time.time()*-1.5 + originDelta[ii]*0.5)/4))
+        r = max(math.sin(time.time()/-1 + originDelta[ii]*(5+math.cos(time.time()/2 + originDelta[ii]))) * shimmerLevel, 0)
+        g = max(math.sin(time.time()/-1 + originDelta[ii]*(5+math.cos(time.time()/2.2 + originDelta[ii]))) * shimmerLevel, 0)
+        b = max(math.sin(time.time()/-1 + originDelta[ii]*(5+math.cos(time.time()/2.5 + originDelta[ii]))) * shimmerLevel, 0)
+        w = whiteLevel - sum((r, g, b))
+        # w = 0
+
+        rgbw_utils.set_pixel(pixels, ii, (g, r, b, w), simulate)
+
 start_time = time.time()
 # currentPalette = random.choice(palettes.keys())
 currentPalette = "unicornBarf"
@@ -216,7 +227,8 @@ while True:
     # paletteViewer(pixel_buffer, currentPalette, 25, (-10, 0, 0))
     # vertical_star_drive(pixel_buffer, (0.0, 0.0, -1.0), (0.0, 0.0, 2.0), 1, 50, "unicornBarf")
     # rain(pixel_buffer, 0.25, 8)
-    colourWaves(pixel_buffer, "stressTest", 1, 1)
+    shimmer(pixel_buffer, 64, 255)
+    # colourWaves(pixel_buffer, "stressTest", 1, 1)
 
     client.put_pixels(pixel_buffer, channel=0)
     time.sleep(1 / fps)
