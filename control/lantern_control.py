@@ -6,6 +6,8 @@ import math
 import glob
 import random
 from PIL import Image
+import RPi.GPIO as GPIO
+import atexit
 import sys
 import os
 
@@ -22,6 +24,14 @@ execfile("coordGen.py")
 import coords
 
 simulate = False
+
+# set up GPIO
+GPIO.setmode(GPIO.BOARD)
+GPIO.setup(3, GPIO.IN)
+
+@atexit.register
+def cleanup():
+    GPIO.cleanup()
 
 # grab palettes
 palettePath = cwd+"/../palettes/"
@@ -217,18 +227,42 @@ start_time = time.time()
 currentPalette = "unicornBarf"
 paletteTimer = time.time()
 
+current_pattern_number = 0
+last_press = 0
+debounce_interval = 0.25
+
+def increment_pattern_number(channel):
+    global last_press
+    global current_pattern_number
+
+    if time.time() - last_press > debounce_interval:
+        last_press = time.time()
+        current_pattern_number += 1
+        if current_pattern_number > 5:
+            current_pattern_number = 0
+        print "Incrementing pattern number to " + str(current_pattern_number)
+        print "Interrupt channel = " + str(channel)
+
+GPIO.add_event_detect(3, GPIO.FALLING, callback=increment_pattern_number)
 while True:
     # if time.time() - paletteTimer > 240:
         # currentPalette = random.choice(palettes.keys())
         # paletteTimer = time.time()
 
     t = (time.time() - start_time) * 5
-    # loot_cave(pixel_buffer)
-    # paletteViewer(pixel_buffer, currentPalette, 25, (-10, 0, 0))
-    # vertical_star_drive(pixel_buffer, (0.0, 0.0, -1.0), (0.0, 0.0, 2.0), 1, 50, "unicornBarf")
-    # rain(pixel_buffer, 0.25, 8)
-    # shimmer(pixel_buffer, 64, 255)
-    colourWaves(pixel_buffer, "stressTest", 1, 1)
+
+    if current_pattern_number == 0:
+        loot_cave(pixel_buffer)
+    elif current_pattern_number == 1:
+        paletteViewer(pixel_buffer, currentPalette, 25, (-10, 0, 0))
+    elif current_pattern_number == 2:
+        vertical_star_drive(pixel_buffer, (0.0, 0.0, -1.0), (0.0, 0.0, 2.0), 1, 50, "unicornBarf")
+    elif current_pattern_number == 3:
+        rain(pixel_buffer, 0.25, 8)
+    elif current_pattern_number == 4:
+        shimmer(pixel_buffer, 64, 255)
+    elif current_pattern_number == 5:
+        colourWaves(pixel_buffer, "stressTest", 1, 1)
 
     client.put_pixels(pixel_buffer, channel=0)
     time.sleep(1 / fps)
