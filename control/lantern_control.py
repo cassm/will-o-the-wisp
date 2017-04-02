@@ -264,7 +264,7 @@ current_palette_id = 0
 paletteTimer = time.time()
 
 speed_val = 1.0
-brightness_val = 1.0
+brightness_val = 0.5
 
 current_pattern_id = 0
 max_pattern_id = 5
@@ -335,7 +335,6 @@ GPIO.add_event_detect(36, GPIO.FALLING, callback=handle_button_input)
 GPIO.add_event_detect(32, GPIO.FALLING, callback=handle_button_input)
 GPIO.add_event_detect(22, GPIO.FALLING, callback=handle_button_input)
 
-iterator = 0
 last_flare_event = 0
 flare_level = 0
 
@@ -354,16 +353,13 @@ while True:
         i2c_last_read = time.time()
 
         try:
-            if iterator % 2 == 0:
-                i2c_speed_val = i2c.read_word_data(i2c_slave_addr, 0)
-            else:
-                i2c_brightness_val = i2c.read_word_data(i2c_slave_addr, 1)
-            iterator += 1
+            i2c_speed_val = i2c.read_word_data(i2c_slave_addr, 0)
+            i2c_brightness_val = i2c.read_word_data(i2c_slave_addr, 1)
         except Exception as e:
             pass
 
         speed_val = max(float(i2c_speed_val) / float(i2c_max_val), 0.00001)*4 # between 0 and 4
-        brightness_val = max(float(i2c_brightness_val) / float(i2c_max_val), 0.00001)*2 # between 0 and 4
+        brightness_val = (max(float(i2c_brightness_val) / float(i2c_max_val), 0.00001)**2.2)*2
 
     effective_time += (time.time() - last_measured_time) * speed_val
     last_measured_time = time.time()
@@ -381,6 +377,8 @@ while True:
     elif current_pattern_id == 5:
         colourWaves(pixel_buffer, palettes.keys()[current_palette_id], 1, 1)
 
-    client.put_pixels(pixel_buffer, channel=0)
+    pixel_buffer_corrected = tuple(tuple(channel * brightness_val for channel in pixel) for pixel in pixel_buffer)
+    client.put_pixels(pixel_buffer_corrected, channel=0)
+    # client.put_pixels(pixel_buffer, channel=0)
     time.sleep(1 / fps)
 
