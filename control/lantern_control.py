@@ -142,13 +142,13 @@ def x_sin(pixels):
         offsets = [0.1, 0.2, 0.0, 0.3]
         pixel =  tuple(math.sin(coords.globalCartesian[ii][0] + effective_time/3 + offset)*256 for offset in offsets)
 
-        rgbw_utils.set_pixel(pixels, ii, pixel, simulate)
+        rgbw_utils.set_pixel(pixels, ii, pixel, simulate, flare_level)
 
 
 def paletteViewer(pixels, paletteName, timeFactor, spaceFactor, start_pixel = 0, end_pixel = n_pixels):
     for ii in range(start_pixel, end_pixel):
         spaceSum = sum(tuple(globalCartesian[ii][component] * spaceFactor[component] for component in range(3)))
-        rgbw_utils.set_pixel(pixels, ii, palettes[paletteName][int((effective_time*timeFactor + spaceSum) % len(palettes[paletteName]))], simulate)
+        rgbw_utils.set_pixel(pixels, ii, palettes[paletteName][int((effective_time*timeFactor + spaceSum) % len(palettes[paletteName]))], simulate, flare_level)
 
 def loot_cave(pixels, start_pixel = 0, end_pixel = n_pixels):
     # how many sine wave cycles are squeezed into our n_pixels
@@ -179,7 +179,7 @@ def loot_cave(pixels, start_pixel = 0, end_pixel = n_pixels):
         b = blackstripes * color_utils.remap(math.cos((t/speed_b + pct*freq_b)*math.pi*2), -1, 1, 0, 256)
         w = blackstripes * color_utils.remap(math.cos((t/speed_w + pct*freq_w)*math.pi*2), -1, 1, 0, 256)
 
-        rgbw_utils.set_pixel(pixels, ii, (g, r, b, w), simulate)
+        rgbw_utils.set_pixel(pixels, ii, (g, r, b, w), simulate, flare_level)
 
 def star_drive(pixels, spaceFactor, flashSpeed, colourSpeed, paletteName, start_pixel = 0, end_pixel = n_pixels):
     for ii in range(n_pixels):
@@ -189,7 +189,7 @@ def star_drive(pixels, spaceFactor, flashSpeed, colourSpeed, paletteName, start_
         newVal = list(mixLevel * channel for channel in palettes[paletteName][paletteIndex])
         newVal[3] = (math.sin(spaceSum + effective_time*flashSpeed) * 0.75 + 0.25) * 512
 
-        rgbw_utils.set_pixel(pixels, ii, newVal, simulate)
+        rgbw_utils.set_pixel(pixels, ii, newVal, simulate, flare_level)
 
 def vertical_star_drive(pixels, localSpaceFactor, lanternSpaceFactor, flashSpeed, colourSpeed, paletteName, start_pixel = 0, end_pixel = n_pixels):
     for ii in range(n_pixels):
@@ -206,7 +206,7 @@ def vertical_star_drive(pixels, localSpaceFactor, lanternSpaceFactor, flashSpeed
         newVal = list(mixLevel * channel for channel in palettes[paletteName][paletteIndex])
         newVal[3] = (math.sin(cyclePoint) * 0.75 + 0.25) * 255
 
-        rgbw_utils.set_pixel(pixels, ii, newVal, simulate)
+        rgbw_utils.set_pixel(pixels, ii, newVal, simulate, flare_level)
 
 def fade_from_to(from_val, to_val, rate):
     result = []
@@ -227,7 +227,7 @@ def rain(pixels, rainInterval, shimmerLevel):
 
         new_value = fade_from_to(rgbw_utils.get_pixel(pixels, ii, simulate), (g, r, b, 128 - sum((g, r, b))), 0.05)
 
-        rgbw_utils.set_pixel(pixels, ii, new_value, simulate)
+        rgbw_utils.set_pixel(pixels, ii, new_value, simulate, flare_level)
 
     for lantern in range(len(coords.lanternLocations)):
         if effective_time > next_drop[lantern]:
@@ -237,7 +237,7 @@ def rain(pixels, rainInterval, shimmerLevel):
             for colour in range(4):
                 rgbw_val.append(random.gauss(255, 16))
 
-            rgbw_utils.set_pixel(pixels, pixel_index, rgbw_val, simulate)
+            rgbw_utils.set_pixel(pixels, pixel_index, rgbw_val, simulate, flare_level)
 
 def colourWaves(pixels, palette, timeSpeed, colourSpeed):
     for ii in range(n_pixels):
@@ -246,7 +246,7 @@ def colourWaves(pixels, palette, timeSpeed, colourSpeed):
         palette_index = int((effective_time*-20*timeSpeed + coords.originDelta[ii]*20*colourSpeed) % len(palettes[palette]))
         rgbw_val = list(channel * mix_level for channel in palettes[palette][palette_index])
         rgbw_val[3] += w_level
-        rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate)
+        rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate, flare_level)
 
 def shimmer(pixels, shimmerLevel, whiteLevel):
     for ii in range(n_pixels):
@@ -257,7 +257,7 @@ def shimmer(pixels, shimmerLevel, whiteLevel):
         w = whiteLevel - sum((r, g, b))
         # w = 0
 
-        rgbw_utils.set_pixel(pixels, ii, (g, r, b, w), simulate)
+        rgbw_utils.set_pixel(pixels, ii, (g, r, b, w), simulate, flare_level)
 
 # currentPalette = random.choice(palettes.keys())
 current_palette_id = 0
@@ -336,12 +336,17 @@ GPIO.add_event_detect(32, GPIO.FALLING, callback=handle_button_input)
 GPIO.add_event_detect(22, GPIO.FALLING, callback=handle_button_input)
 
 iterator = 0
+last_flare_event = 0
+flare_level = 0
 
 while True:
     if not GPIO.input(13):
         print "FLARE"
+        last_flare_event = effective_time
     if not GPIO.input(11):
         print "GLITCH"
+
+    flare_level = 220.0 / max((effective_time - last_flare_event)**2, 1)
     # if time.time() - paletteTimer > 240:
         # currentPalette = random.choice(palettes.keys())
         # paletteTimer = time.time()
