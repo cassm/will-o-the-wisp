@@ -267,6 +267,7 @@ speed_val = 1.0
 brightness_val = 1.0
 
 current_pattern_id = 0
+max_pattern_id = 5
 last_press = 0
 debounce_interval = 0.25
 
@@ -283,6 +284,7 @@ def increment_palette(randomise):
 
 def handle_button_input(channel):
     global last_press
+    global current_pattern_id
 
     if time.time() - last_press > debounce_interval:
         last_press = time.time()
@@ -291,6 +293,10 @@ def handle_button_input(channel):
             print "AUTO"
         elif channel == 12:
             print "RANDOM PATTERN"
+            new_pattern_id = random.randrange(max_pattern_id+1)
+            while new_pattern_id == current_pattern_id:
+                new_pattern_id = random.randrange(max_pattern_id+1)
+            current_pattern_id = new_pattern_id
         elif channel == 33:
             print "Fizzy lifting drink"
             current_pattern_id = 0
@@ -360,7 +366,7 @@ while True:
     if current_pattern_id == 0:
         loot_cave(pixel_buffer)
     elif current_pattern_id == 1:
-        paletteViewer(pixel_buffer, currentPalette, 25, (-10, 0, 0))
+        paletteViewer(pixel_buffer, palettes.keys()[current_palette_id], 25, (-10, 0, 0))
     elif current_pattern_id == 2:
         vertical_star_drive(pixel_buffer, (0.0, 0.0, -1.0), (0.0, 0.0, 2.0), 1, 50, "unicornBarf")
     elif current_pattern_id == 3:
@@ -368,7 +374,7 @@ while True:
     elif current_pattern_id == 4:
         shimmer(pixel_buffer, 64, 255)
     elif current_pattern_id == 5:
-        colourWaves(pixel_buffer, "stressTest", 1, 1)
+        colourWaves(pixel_buffer, palettes.keys()[current_palette_id], 1, 1)
 
     client.put_pixels(pixel_buffer, channel=0)
     time.sleep(1 / fps)
