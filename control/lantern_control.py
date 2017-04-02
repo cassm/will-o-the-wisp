@@ -8,6 +8,7 @@ import random
 from PIL import Image
 import RPi.GPIO as GPIO
 import atexit
+import smbus
 import sys
 import os
 
@@ -19,6 +20,10 @@ import opc
 import color_utils
 import rgbw_utils
 
+# allow manipulation of time through potentiometer
+last_measured_time = time.time()
+effective_time = time.time()
+
 # generate coordinates
 execfile("coordGen.py")
 import coords
@@ -27,11 +32,19 @@ simulate = False
 
 # set up GPIO
 GPIO.setmode(GPIO.BOARD)
-GPIO.setup(3, GPIO.IN)
+GPIO.setup(11, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 @atexit.register
 def cleanup():
     GPIO.cleanup()
+
+#set up i2c slave
+i2c = smbus.SMBus(1)
+i2c_slave_addr = 8 # address of the arduino I2C
+i2c_read_interval = 0.05
+i2c_last_read = 0
+i2c_analog_val = 0
+i2c_max_val = 783
 
 # grab palettes
 palettePath = cwd+"/../palettes/"
@@ -105,7 +118,7 @@ pixel_buffer = [[0.0, 0.0, 0.0] for i in range(buffer_size)]
 def x_sin(pixels):
     for ii in range(n_pixels):
         offsets = [0.1, 0.2, 0.0, 0.3]
-        pixel =  tuple(math.sin(coords.globalCartesian[ii][0] + time.time()/3 + offset)*256 for offset in offsets)
+        pixel =  tuple(math.sin(coords.globalCartesian[ii][0] + effective_time/3 + offset)*256 for offset in offsets)
 
         rgbw_utils.set_pixel(pixels, ii, pixel, simulate)
 
@@ -113,7 +126,7 @@ def x_sin(pixels):
 def paletteViewer(pixels, paletteName, timeFactor, spaceFactor, start_pixel = 0, end_pixel = n_pixels):
     for ii in range(start_pixel, end_pixel):
         spaceSum = sum(tuple(globalCartesian[ii][component] * spaceFactor[component] for component in range(3)))
-        rgbw_utils.set_pixel(pixels, ii, palettes[paletteName][int((time.time()*timeFactor + spaceSum) % len(palettes[paletteName]))], simulate)
+        rgbw_utils.set_pixel(pixels, ii, palettes[paletteName][int((effective_time*timeFactor + spaceSum) % len(palettes[paletteName]))], simulate)
 
 def loot_cave(pixels, start_pixel = 0, end_pixel = n_pixels):
     # how many sine wave cycles are squeezed into our n_pixels
@@ -128,6 +141,8 @@ def loot_cave(pixels, start_pixel = 0, end_pixel = n_pixels):
     speed_g = -13
     speed_b = 19
     speed_w = 23
+
+    t = effective_time*5
 
     for ii in range(start_pixel, end_pixel):
         pct = (ii / n_pixels)
@@ -147,10 +162,10 @@ def loot_cave(pixels, start_pixel = 0, end_pixel = n_pixels):
 def star_drive(pixels, spaceFactor, flashSpeed, colourSpeed, paletteName, start_pixel = 0, end_pixel = n_pixels):
     for ii in range(n_pixels):
         spaceSum = sum(tuple(coords.globalCartesian[ii][component] * spaceFactor[component] for component in range(3)))
-        mixLevel = (math.sin(spaceSum + time.time()*flashSpeed - 0.5)/2) + 0.5
-        paletteIndex = int(time.time() * colourSpeed) % len(palettes[paletteName])
+        mixLevel = (math.sin(spaceSum + effective_time*flashSpeed - 0.5)/2) + 0.5
+        paletteIndex = int(effective_time * colourSpeed) % len(palettes[paletteName])
         newVal = list(mixLevel * channel for channel in palettes[paletteName][paletteIndex])
-        newVal[3] = (math.sin(spaceSum + time.time()*flashSpeed) * 0.75 + 0.25) * 512
+        newVal[3] = (math.sin(spaceSum + effective_time*flashSpeed) * 0.75 + 0.25) * 512
 
         rgbw_utils.set_pixel(pixels, ii, newVal, simulate)
 
@@ -161,9 +176,9 @@ def vertical_star_drive(pixels, localSpaceFactor, lanternSpaceFactor, flashSpeed
 
         localSpaceSum = sum(tuple(coords.localCartesian[lanternId][pixelId][component] * localSpaceFactor[component] for component in range(3)))
         lanternSpaceSum = sum(tuple(coords.lanternLocations[lanternId][component] * lanternSpaceFactor[component] for component in range(3)))
-        cyclePoint = lanternSpaceSum + localSpaceSum + time.time()*flashSpeed
+        cyclePoint = lanternSpaceSum + localSpaceSum + effective_time*flashSpeed
 
-        paletteIndex = int(time.time() * colourSpeed) % len(palettes[paletteName])
+        paletteIndex = int(effective_time * colourSpeed) % len(palettes[paletteName])
         mixLevel = (math.sin(cyclePoint - 0.5)/2) + 0.5
 
         newVal = list(mixLevel * channel for channel in palettes[paletteName][paletteIndex])
@@ -184,17 +199,17 @@ def rain(pixels, rainInterval, shimmerLevel):
     global next_drop
 
     for ii in range(n_pixels):
-        r = math.sin(time.time()/-1 + originDelta[ii]*5) * shimmerLevel
-        g = math.sin(time.time()/-2 + originDelta[ii]*5) * shimmerLevel
-        b = math.sin(time.time()/-3 + originDelta[ii]*5) * shimmerLevel
+        r = math.sin(effective_time/-1 + originDelta[ii]*5) * shimmerLevel
+        g = math.sin(effective_time/-2 + originDelta[ii]*5) * shimmerLevel
+        b = math.sin(effective_time/-3 + originDelta[ii]*5) * shimmerLevel
 
         new_value = fade_from_to(rgbw_utils.get_pixel(pixels, ii, simulate), (g, r, b, 128 - sum((g, r, b))), 0.05)
 
         rgbw_utils.set_pixel(pixels, ii, new_value, simulate)
 
     for lantern in range(len(coords.lanternLocations)):
-        if time.time() > next_drop[lantern]:
-            next_drop[lantern] = random.gauss(time.time()+rainInterval, rainInterval/8)
+        if effective_time > next_drop[lantern]:
+            next_drop[lantern] = random.gauss(effective_time+rainInterval, rainInterval/8)
             pixel_index = lantern*pixels_per_lantern + random.randrange(pixels_per_lantern)
             rgbw_val = []
             for colour in range(4):
@@ -204,28 +219,29 @@ def rain(pixels, rainInterval, shimmerLevel):
 
 def colourWaves(pixels, palette, timeSpeed, colourSpeed):
     for ii in range(n_pixels):
-        w_level = math.sin(time.time()*-2*timeSpeed + coords.originDelta[ii] * 15) * (math.sin(time.time()/-2 + originDelta[ii]/4)+3)*16
-        mix_level = (math.sin(time.time()/-4 + coords.originDelta[ii]/8)+2) / 3
-        palette_index = int((time.time()*-20*timeSpeed + coords.originDelta[ii]*20*colourSpeed) % len(palettes[palette]))
+        w_level = math.sin(effective_time*-2*timeSpeed + coords.originDelta[ii] * 15) * (math.sin(effective_time/-2 + originDelta[ii]/4)+3)*16
+        mix_level = (math.sin(effective_time/-4 + coords.originDelta[ii]/8)+2) / 3
+        palette_index = int((effective_time*-20*timeSpeed + coords.originDelta[ii]*20*colourSpeed) % len(palettes[palette]))
         rgbw_val = list(channel * mix_level for channel in palettes[palette][palette_index])
         rgbw_val[3] += w_level
         rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate)
 
 def shimmer(pixels, shimmerLevel, whiteLevel):
     for ii in range(n_pixels):
-        # shimmerLevel = shimmerLevel * (((math.sin(time.time()/-2.5 + originDelta[ii]*0.5)+1)/2) + (math.sin(time.time()*-1.5 + originDelta[ii]*0.5)/4))
-        r = max(math.sin(time.time()/-1 + originDelta[ii]*(5+math.cos(time.time()/2 + originDelta[ii]))) * shimmerLevel, 0)
-        g = max(math.sin(time.time()/-1 + originDelta[ii]*(5+math.cos(time.time()/2.2 + originDelta[ii]))) * shimmerLevel, 0)
-        b = max(math.sin(time.time()/-1 + originDelta[ii]*(5+math.cos(time.time()/2.5 + originDelta[ii]))) * shimmerLevel, 0)
+        # shimmerLevel = shimmerLevel * (((math.sin(effective_time/-2.5 + originDelta[ii]*0.5)+1)/2) + (math.sin(effective_time*-1.5 + originDelta[ii]*0.5)/4))
+        r = max(math.sin(effective_time/-1 + originDelta[ii]*(5+math.cos(effective_time/2 + originDelta[ii]))) * shimmerLevel, 0)
+        g = max(math.sin(effective_time/-1 + originDelta[ii]*(5+math.cos(effective_time/2.2 + originDelta[ii]))) * shimmerLevel, 0)
+        b = max(math.sin(effective_time/-1 + originDelta[ii]*(5+math.cos(effective_time/2.5 + originDelta[ii]))) * shimmerLevel, 0)
         w = whiteLevel - sum((r, g, b))
         # w = 0
 
         rgbw_utils.set_pixel(pixels, ii, (g, r, b, w), simulate)
 
-start_time = time.time()
 # currentPalette = random.choice(palettes.keys())
 currentPalette = "unicornBarf"
 paletteTimer = time.time()
+
+speed_val = 0.5
 
 current_pattern_number = 0
 last_press = 0
@@ -243,13 +259,18 @@ def increment_pattern_number(channel):
         print "Incrementing pattern number to " + str(current_pattern_number)
         print "Interrupt channel = " + str(channel)
 
-GPIO.add_event_detect(3, GPIO.FALLING, callback=increment_pattern_number)
+GPIO.add_event_detect(11, GPIO.FALLING, callback=increment_pattern_number)
 while True:
     # if time.time() - paletteTimer > 240:
         # currentPalette = random.choice(palettes.keys())
         # paletteTimer = time.time()
+    if time.time() - i2c_last_read > i2c_read_interval:
+        i2c_last_read = time.time()
+        i2c_analog_val = i2c.read_word_data(i2c_slave_addr, 0x35)
+        speed_val = max(float(i2c_analog_val) / float(i2c_max_val), 0.00001)*4 # between 0 and 4
 
-    t = (time.time() - start_time) * 5
+    effective_time += (time.time() - last_measured_time) * speed_val
+    last_measured_time = time.time()
 
     if current_pattern_number == 0:
         loot_cave(pixel_buffer)
