@@ -33,18 +33,40 @@ simulate = False
 # set up GPIO
 GPIO.setmode(GPIO.BOARD)
 GPIO.setup(11, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(13, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(15, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(12, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(33, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(31, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(29, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(18, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(16, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(37, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(36, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(32, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(22, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 @atexit.register
 def cleanup():
     GPIO.cleanup()
 
 #set up i2c slave
-i2c = smbus.SMBus(1)
 i2c_slave_addr = 8 # address of the arduino I2C
 i2c_read_interval = 0.05
 i2c_last_read = 0
 i2c_analog_val = 0
 i2c_max_val = 783
+i2c_initialised = False
+
+i2c_speed_val = 512
+i2c_brightness_val = 512
+
+try:
+    i2c = smbus.SMBus(1)
+except Exception as e:
+    print "i2c slave not detected. continuing..."
+else:
+    i2c_initialised = True
 
 # grab palettes
 palettePath = cwd+"/../palettes/"
@@ -238,52 +260,116 @@ def shimmer(pixels, shimmerLevel, whiteLevel):
         rgbw_utils.set_pixel(pixels, ii, (g, r, b, w), simulate)
 
 # currentPalette = random.choice(palettes.keys())
-currentPalette = "unicornBarf"
+current_palette_id = 0
 paletteTimer = time.time()
 
-speed_val = 0.5
+speed_val = 1.0
+brightness_val = 1.0
 
-current_pattern_number = 0
+current_pattern_id = 0
 last_press = 0
 debounce_interval = 0.25
 
-def increment_pattern_number(channel):
+def increment_palette(randomise):
+    global current_palette_id
+
+    if randomise:
+        new_palette_id = random.randrange(len(palettes.keys()))
+        while new_palette_id == current_palette_id:
+            new_palette_id = random.randrange(len(palettes.keys()))
+        current_palette_id = new_palette_id
+    else:
+        current_palette_id = (current_palette_id + 1) % len(palettes.keys())
+
+def handle_button_input(channel):
     global last_press
-    global current_pattern_number
 
     if time.time() - last_press > debounce_interval:
         last_press = time.time()
-        current_pattern_number += 1
-        if current_pattern_number > 5:
-            current_pattern_number = 0
-        print "Incrementing pattern number to " + str(current_pattern_number)
-        print "Interrupt channel = " + str(channel)
 
-GPIO.add_event_detect(11, GPIO.FALLING, callback=increment_pattern_number)
+        if channel == 15:
+            print "AUTO"
+        elif channel == 12:
+            print "RANDOM PATTERN"
+        elif channel == 33:
+            print "Fizzy lifting drink"
+            current_pattern_id = 0
+        elif channel == 31:
+            print "Star drive"
+            current_pattern_id = 2
+        elif channel == 29:
+            print "Make me one with everything"
+            current_pattern_id = 4
+        elif channel == 18:
+            print "Ego death"
+            current_pattern_id = 5
+        elif channel == 16:
+            print "Next Palette"
+            increment_palette(False)
+        elif channel == 37:
+            print "The most beautiful skies"
+            current_pattern_id = 1
+        elif channel == 36:
+            print "Magic forest but it's raining"
+            current_pattern_id = 3
+        elif channel == 32:
+            print "BM"
+        elif channel == 22:
+            print "BR"
+
+GPIO.add_event_detect(12, GPIO.FALLING, callback=handle_button_input)
+GPIO.add_event_detect(15, GPIO.FALLING, callback=handle_button_input)
+GPIO.add_event_detect(33, GPIO.FALLING, callback=handle_button_input)
+GPIO.add_event_detect(31, GPIO.FALLING, callback=handle_button_input)
+GPIO.add_event_detect(29, GPIO.FALLING, callback=handle_button_input)
+GPIO.add_event_detect(18, GPIO.FALLING, callback=handle_button_input)
+GPIO.add_event_detect(16, GPIO.FALLING, callback=handle_button_input)
+GPIO.add_event_detect(37, GPIO.FALLING, callback=handle_button_input)
+GPIO.add_event_detect(36, GPIO.FALLING, callback=handle_button_input)
+GPIO.add_event_detect(32, GPIO.FALLING, callback=handle_button_input)
+GPIO.add_event_detect(22, GPIO.FALLING, callback=handle_button_input)
+
+iterator = 0
+
 while True:
+    if not GPIO.input(13):
+        print "FLARE"
+    if not GPIO.input(11):
+        print "GLITCH"
     # if time.time() - paletteTimer > 240:
         # currentPalette = random.choice(palettes.keys())
         # paletteTimer = time.time()
-    if time.time() - i2c_last_read > i2c_read_interval:
+    if i2c_initialised and time.time() - i2c_last_read > i2c_read_interval:
         i2c_last_read = time.time()
-        i2c_analog_val = i2c.read_word_data(i2c_slave_addr, 0x35)
-        speed_val = max(float(i2c_analog_val) / float(i2c_max_val), 0.00001)*4 # between 0 and 4
+
+        try:
+            if iterator % 2 == 0:
+                i2c_speed_val = i2c.read_word_data(i2c_slave_addr, 0)
+            else:
+                i2c_brightness_val = i2c.read_word_data(i2c_slave_addr, 1)
+            iterator += 1
+        except Exception as e:
+            pass
+
+        speed_val = max(float(i2c_speed_val) / float(i2c_max_val), 0.00001)*4 # between 0 and 4
+        brightness_val = max(float(i2c_brightness_val) / float(i2c_max_val), 0.00001)*2 # between 0 and 4
 
     effective_time += (time.time() - last_measured_time) * speed_val
     last_measured_time = time.time()
 
-    if current_pattern_number == 0:
+    if current_pattern_id == 0:
         loot_cave(pixel_buffer)
-    elif current_pattern_number == 1:
+    elif current_pattern_id == 1:
         paletteViewer(pixel_buffer, currentPalette, 25, (-10, 0, 0))
-    elif current_pattern_number == 2:
+    elif current_pattern_id == 2:
         vertical_star_drive(pixel_buffer, (0.0, 0.0, -1.0), (0.0, 0.0, 2.0), 1, 50, "unicornBarf")
-    elif current_pattern_number == 3:
+    elif current_pattern_id == 3:
         rain(pixel_buffer, 0.25, 8)
-    elif current_pattern_number == 4:
+    elif current_pattern_id == 4:
         shimmer(pixel_buffer, 64, 255)
-    elif current_pattern_number == 5:
+    elif current_pattern_id == 5:
         colourWaves(pixel_buffer, "stressTest", 1, 1)
 
     client.put_pixels(pixel_buffer, channel=0)
     time.sleep(1 / fps)
+
