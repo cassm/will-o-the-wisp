@@ -32,8 +32,8 @@ localCartesian = []
 sphericalRadians = []
 
 for coordinate in spherical:
-    phi = math.radians(coordinate[0])
-    theta = math.radians(coordinate[1])
+    phi = math.radians(coordinate[1])
+    theta = math.radians(coordinate[0])
     sphericalRadians.append((round(phi, 4), round(theta, 4)))
 
 for lanternIndex, location in enumerate(lanternLocations):

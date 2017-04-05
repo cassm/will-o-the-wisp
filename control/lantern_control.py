@@ -8,7 +8,7 @@ import random
 from PIL import Image
 import RPi.GPIO as GPIO
 import atexit
-import smbus
+import serial
 import sys
 import os
 
@@ -50,23 +50,24 @@ GPIO.setup(22, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 def cleanup():
     GPIO.cleanup()
 
-#set up i2c slave
-i2c_slave_addr = 8 # address of the arduino I2C
-i2c_read_interval = 0.05
-i2c_last_read = 0
-i2c_analog_val = 0
-i2c_max_val = 783
-i2c_initialised = False
+serial_initialised = False
+srl_speed_val = 512
+srl_brightness_val = 512
+srl_max_val = 738
 
-i2c_speed_val = 512
-i2c_brightness_val = 512
+srl = serial.Serial("/dev/ttyACM0",
+                    baudrate=57600,
+                    parity=serial.PARITY_NONE,
+                    stopbits=serial.STOPBITS_ONE,
+                    bytesize=serial.EIGHTBITS,
+                    writeTimeout = 0,
+                    timeout = 10,
+                    rtscts=False,
+                    dsrdtr=False,
+                    xonxoff=False)
 
-try:
-    i2c = smbus.SMBus(1)
-except Exception as e:
-    print "i2c slave not detected. continuing..."
-else:
-    i2c_initialised = True
+if srl.isOpen():
+    serial_initialised = True
 
 # grab palettes
 palettePath = cwd+"/../palettes/"
@@ -144,6 +145,8 @@ def x_sin(pixels):
 
         rgbw_utils.set_pixel(pixels, ii, pixel, simulate, flare_level)
 
+def inverse_square(x, y, exponent):
+    return (1.0/(abs(x - y)**exponent))
 
 def paletteViewer(pixels, paletteName, timeFactor, spaceFactor, start_pixel = 0, end_pixel = n_pixels):
     for ii in range(start_pixel, end_pixel):
@@ -264,12 +267,17 @@ current_palette_id = 0
 paletteTimer = time.time()
 
 speed_val = 1.0
-brightness_val = 1.0
+brightness_val = 0.5
 
 current_pattern_id = 0
 max_pattern_id = 5
 last_press = 0
 debounce_interval = 0.25
+
+last_flare_event = 0
+flare_level = 0
+flare = False
+glitch = False
 
 def increment_palette(randomise):
     global current_palette_id
@@ -323,6 +331,15 @@ def handle_button_input(channel):
         elif channel == 22:
             print "BR"
 
+def handle_flare_glitch(channel):
+    global flare
+    global glitch
+
+    if channel == 13:
+        flare = not GPIO.input(13)
+    elif channel == 11:
+        glitch = not GPIO.input(11)
+
 GPIO.add_event_detect(12, GPIO.FALLING, callback=handle_button_input)
 GPIO.add_event_detect(15, GPIO.FALLING, callback=handle_button_input)
 GPIO.add_event_detect(33, GPIO.FALLING, callback=handle_button_input)
@@ -334,39 +351,37 @@ GPIO.add_event_detect(37, GPIO.FALLING, callback=handle_button_input)
 GPIO.add_event_detect(36, GPIO.FALLING, callback=handle_button_input)
 GPIO.add_event_detect(32, GPIO.FALLING, callback=handle_button_input)
 GPIO.add_event_detect(22, GPIO.FALLING, callback=handle_button_input)
-
-iterator = 0
-last_flare_event = 0
-flare_level = 0
+GPIO.add_event_detect(13, GPIO.BOTH, callback=handle_flare_glitch)
+GPIO.add_event_detect(11, GPIO.BOTH, callback=handle_flare_glitch)
 
 while True:
-    if not GPIO.input(13):
-        print "FLARE"
+    if flare:
+        # print "FLARE"
         last_flare_event = effective_time
-    if not GPIO.input(11):
+    if glitch:
         print "GLITCH"
 
-    flare_level = 220.0 / max((effective_time - last_flare_event)**2, 1)
+    flare_level = 255.0 * ((1 / max((effective_time - last_flare_event)**1.5, 0.1))**2.2)
     # if time.time() - paletteTimer > 240:
         # currentPalette = random.choice(palettes.keys())
         # paletteTimer = time.time()
-    if i2c_initialised and time.time() - i2c_last_read > i2c_read_interval:
-        i2c_last_read = time.time()
-
+    if serial_initialised:
         try:
-            if iterator % 2 == 0:
-                i2c_speed_val = i2c.read_word_data(i2c_slave_addr, 0)
-            else:
-                i2c_brightness_val = i2c.read_word_data(i2c_slave_addr, 1)
-            iterator += 1
+            srl.write('x')
+            srl_brightness_val = int(srl.readline())
+            srl_speed_val = int(srl.readline())
         except Exception as e:
             pass
 
-        speed_val = max(float(i2c_speed_val) / float(i2c_max_val), 0.00001)*4 # between 0 and 4
-        brightness_val = max(float(i2c_brightness_val) / float(i2c_max_val), 0.00001)*2 # between 0 and 4
+        speed_val = max(float(srl_speed_val) / float(srl_max_val), 0.00001)*8 # between 0 and 8
+        brightness_val = (max(float(srl_brightness_val) / float(srl_max_val), 0.00001)**2.2)*2
 
     effective_time += (time.time() - last_measured_time) * speed_val
     last_measured_time = time.time()
+
+    # for ii in range(n_pixels):
+        # rgbw_utils.set_pixel(pixel_buffer, ii, (0, 0, 0, 255*inverse_square(coords.spherical[int(ii%60)][1]+20, (time.time()*12) % 80, 2.5)), simulate, flare_level)
+        # rgbw_utils.set_pixel(pixel_buffer, ii, (0, 0, 0, 255*coords.localCartesian[int(ii / 60)][int(ii % 60)][2]), simulate, flare_level)
 
     if current_pattern_id == 0:
         loot_cave(pixel_buffer)
@@ -381,6 +396,8 @@ while True:
     elif current_pattern_id == 5:
         colourWaves(pixel_buffer, palettes.keys()[current_palette_id], 1, 1)
 
-    client.put_pixels(pixel_buffer, channel=0)
+    pixel_buffer_corrected = tuple(tuple(channel * brightness_val for channel in pixel) for pixel in pixel_buffer)
+    client.put_pixels(pixel_buffer_corrected, channel=0)
+    # client.put_pixels(pixel_buffer, channel=0)
     time.sleep(1 / fps)
 
