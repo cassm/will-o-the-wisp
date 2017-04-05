@@ -51,11 +51,7 @@ last_measured_time = time.time()
 effective_time = time.time()
 
 last_mode_switch = time.time()
-auto_mode = False
 auto_mode_interval = 300 # 5 minutes
-auto_mode_interval = 300 # 5 minutes
-if running_on_pi:
-    auto_mode = GPIO.input(15)
 
 # generate coordinates
 execfile("coordGen.py")
@@ -357,6 +353,7 @@ def increment_palette(randomise):
 
 def handle_button_input(channel):
     global last_press
+    global last_flare_event
     global current_pattern_id
 
     if time.time() - last_press > debounce_interval:
@@ -364,27 +361,22 @@ def handle_button_input(channel):
 
         if channel == 15:
             last_mode_switch = time.time()
-            if running_on_pi:
-                auto_mode = GPIO.input(15)
-            if auto_mode:
-                print "AUTO"
-            else:
-                print "MANUAL"
+            print "AUTO switched"
         elif channel == 12:
             print "RANDOM PATTERN"
             new_pattern_id = random.randrange(max_pattern_id+1)
             while new_pattern_id == current_pattern_id:
                 new_pattern_id = random.randrange(max_pattern_id+1)
             current_pattern_id = new_pattern_id
-            last_flare_event = time.time()
+            last_flare_event = effective_time
         elif channel == 33:
             print "Fizzy lifting drink"
             current_pattern_id = 0
-            last_flare_event = time.time()
+            last_flare_event = effective_time
         elif channel == 31:
             print "Star drive"
             current_pattern_id = 2
-            last_flare_event = time.time()
+            last_flare_event = effective_time
         elif channel == 29:
             print "Make me one with everything"
             current_pattern_id = 4
@@ -394,26 +386,26 @@ def handle_button_input(channel):
         elif channel == 18:
             print "Ego death"
             current_pattern_id = 5
-            last_flare_event = time.time()
+            last_flare_event = effective_time
         elif channel == 16:
             print "Next Palette"
             increment_palette(False)
             if current_pattern_id == 5 or current_pattern_id == 1:
-                last_flare_event = time.time()
+                last_flare_event = effective_time
         elif channel == 37:
             print "The most beautiful skies"
             current_pattern_id = 1
-            last_flare_event = time.time()
+            last_flare_event = effective_time
         elif channel == 36:
             print "Magic forest but it's raining"
             current_pattern_id = 3
-            last_flare_event = time.time()
+            last_flare_event = effective_time
         elif channel == 32:
             print "BM"
-            last_flare_event = time.time()
+            last_flare_event = effective_time
         elif channel == 22:
             print "BR"
-            last_flare_event = time.time()
+            last_flare_event = effective_time
 
 def handle_flare_glitch(channel):
     global flare
@@ -447,15 +439,17 @@ while True:
     if glitch:
         print "GLITCH"
 
-    if auto_mode and time.time()-last_mode_switch > auto_mode_interval:
-        new_mode = random.randrange(max_pattern_id)
-        while new_mode == current_pattern_id:
+    if time.time()-last_mode_switch > auto_mode_interval:
+        last_mode_switch = time.time()
+        if GPIO.input(15):
             new_mode = random.randrange(max_pattern_id)
-        current_pattern_id = new_mode
-        last_flare_event = time.time()
+            while new_mode == current_pattern_id:
+                new_mode = random.randrange(max_pattern_id)
+            current_pattern_id = new_mode
+            last_flare_event = effective_time
 
 
-    flare_level = 255.0 * ((1 / max((effective_time - last_flare_event)**1.5, 0.1))**2.2)
+    flare_level = 512.0 * (1 / (max(((effective_time - last_flare_event)*2)**1.5, 1)**2.2))
     # if time.time() - paletteTimer > 240:
         # currentPalette = random.choice(palettes.keys())
         # paletteTimer = time.time()
