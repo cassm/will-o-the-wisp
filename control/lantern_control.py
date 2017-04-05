@@ -50,12 +50,18 @@ import rgbw_utils
 last_measured_time = time.time()
 effective_time = time.time()
 
+last_mode_switch = time.time()
+auto_mode = False
+auto_mode_interval = 300 # 5 minutes
+auto_mode_interval = 300 # 5 minutes
+if running_on_pi:
+    auto_mode = GPIO.input(15)
+
 # generate coordinates
 execfile("coordGen.py")
 import coords
 
-simulate = False
-
+simulate = not running_on_pi
 
 serial_initialised = False
 srl_speed_val = 512
@@ -309,38 +315,55 @@ def handle_button_input(channel):
         last_press = time.time()
 
         if channel == 15:
-            print "AUTO"
+            last_mode_switch = time.time()
+            if running_on_pi:
+                auto_mode = GPIO.input(15)
+            if auto_mode:
+                print "AUTO"
+            else:
+                print "MANUAL"
         elif channel == 12:
             print "RANDOM PATTERN"
             new_pattern_id = random.randrange(max_pattern_id+1)
             while new_pattern_id == current_pattern_id:
                 new_pattern_id = random.randrange(max_pattern_id+1)
             current_pattern_id = new_pattern_id
+            last_flare_event = time.time()
         elif channel == 33:
             print "Fizzy lifting drink"
             current_pattern_id = 0
+            last_flare_event = time.time()
         elif channel == 31:
             print "Star drive"
             current_pattern_id = 2
+            last_flare_event = time.time()
         elif channel == 29:
             print "Make me one with everything"
             current_pattern_id = 4
+            last_flare_event = time.time()
         elif channel == 18:
             print "Ego death"
             current_pattern_id = 5
+            last_flare_event = time.time()
         elif channel == 16:
             print "Next Palette"
             increment_palette(False)
+            if current_pattern_id == 5 or current_pattern_id == 1:
+                last_flare_event = time.time()
         elif channel == 37:
             print "The most beautiful skies"
             current_pattern_id = 1
+            last_flare_event = time.time()
         elif channel == 36:
             print "Magic forest but it's raining"
             current_pattern_id = 3
+            last_flare_event = time.time()
         elif channel == 32:
             print "BM"
+            last_flare_event = time.time()
         elif channel == 22:
             print "BR"
+            last_flare_event = time.time()
 
 def handle_flare_glitch(channel):
     global flare
@@ -354,7 +377,7 @@ def handle_flare_glitch(channel):
 
 if running_on_pi:
     GPIO.add_event_detect(12, GPIO.FALLING, callback=handle_button_input)
-    GPIO.add_event_detect(15, GPIO.FALLING, callback=handle_button_input)
+    GPIO.add_event_detect(15, GPIO.BOTH, callback=handle_button_input)
     GPIO.add_event_detect(33, GPIO.FALLING, callback=handle_button_input)
     GPIO.add_event_detect(31, GPIO.FALLING, callback=handle_button_input)
     GPIO.add_event_detect(29, GPIO.FALLING, callback=handle_button_input)
@@ -373,6 +396,14 @@ while True:
         last_flare_event = effective_time
     if glitch:
         print "GLITCH"
+
+    if auto_mode and time.time()-last_mode_switch > auto_mode_interval:
+        new_mode = random.randrange(max_pattern_id)
+        while new_mode == current_pattern_id:
+            new_mode = random.randrange(max_pattern_id)
+        current_pattern_id = new_mode
+        last_flare_event = time.time()
+
 
     flare_level = 255.0 * ((1 / max((effective_time - last_flare_event)**1.5, 0.1))**2.2)
     # if time.time() - paletteTimer > 240:
