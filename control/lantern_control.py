@@ -145,6 +145,8 @@ def x_sin(pixels):
 
         rgbw_utils.set_pixel(pixels, ii, pixel, simulate, flare_level)
 
+def inverse_square(x, y, exponent):
+    return (1.0/(abs(x - y)**exponent))
 
 def paletteViewer(pixels, paletteName, timeFactor, spaceFactor, start_pixel = 0, end_pixel = n_pixels):
     for ii in range(start_pixel, end_pixel):
@@ -376,6 +378,10 @@ while True:
 
     effective_time += (time.time() - last_measured_time) * speed_val
     last_measured_time = time.time()
+
+    # for ii in range(n_pixels):
+        # rgbw_utils.set_pixel(pixel_buffer, ii, (0, 0, 0, 255*inverse_square(coords.spherical[int(ii%60)][1]+20, (time.time()*12) % 80, 2.5)), simulate, flare_level)
+        # rgbw_utils.set_pixel(pixel_buffer, ii, (0, 0, 0, 255*coords.localCartesian[int(ii / 60)][int(ii % 60)][2]), simulate, flare_level)
 
     if current_pattern_id == 0:
         loot_cave(pixel_buffer)
