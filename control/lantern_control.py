@@ -6,11 +6,37 @@ import math
 import glob
 import random
 from PIL import Image
-import RPi.GPIO as GPIO
 import atexit
 import serial
 import sys
 import os
+
+running_on_pi = os.uname()[4][:3] == 'arm'
+
+if running_on_pi:
+    import RPi.GPIO as GPIO
+    # set up GPIO
+    GPIO.setmode(GPIO.BOARD)
+    GPIO.setup(11, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.setup(13, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.setup(15, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.setup(12, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.setup(33, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.setup(31, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.setup(29, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.setup(18, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.setup(16, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.setup(37, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.setup(36, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.setup(32, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.setup(22, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
+@atexit.register
+def cleanup():
+    if running_on_pi:
+        GPIO.cleanup()
+    else:
+        pass
 
 # add openpixel python path
 cwd = os.getcwd()
@@ -30,44 +56,29 @@ import coords
 
 simulate = False
 
-# set up GPIO
-GPIO.setmode(GPIO.BOARD)
-GPIO.setup(11, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(13, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(15, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(12, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(33, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(31, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(29, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(18, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(16, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(37, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(36, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(32, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(22, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-
-@atexit.register
-def cleanup():
-    GPIO.cleanup()
 
 serial_initialised = False
 srl_speed_val = 512
 srl_brightness_val = 512
 srl_max_val = 738
 
-srl = serial.Serial("/dev/ttyACM0",
-                    baudrate=57600,
-                    parity=serial.PARITY_NONE,
-                    stopbits=serial.STOPBITS_ONE,
-                    bytesize=serial.EIGHTBITS,
-                    writeTimeout = 0,
-                    timeout = 10,
-                    rtscts=False,
-                    dsrdtr=False,
-                    xonxoff=False)
+try:
+    srl = serial.Serial("/dev/ttyACM0",
+                        baudrate=57600,
+                        parity=serial.PARITY_NONE,
+                        stopbits=serial.STOPBITS_ONE,
+                        bytesize=serial.EIGHTBITS,
+                        writeTimeout = 0,
+                        timeout = 10,
+                        rtscts=False,
+                        dsrdtr=False,
+                        xonxoff=False)
 
-if srl.isOpen():
-    serial_initialised = True
+    if srl.isOpen():
+        serial_initialised = True
+
+except Exception as e:
+    pass
 
 # grab palettes
 palettePath = cwd+"/../palettes/"
@@ -335,24 +346,26 @@ def handle_flare_glitch(channel):
     global flare
     global glitch
 
-    if channel == 13:
-        flare = not GPIO.input(13)
-    elif channel == 11:
-        glitch = not GPIO.input(11)
+    if running_on_pi:
+        if channel == 13:
+            flare = not GPIO.input(13)
+        elif channel == 11:
+            glitch = not GPIO.input(11)
 
-GPIO.add_event_detect(12, GPIO.FALLING, callback=handle_button_input)
-GPIO.add_event_detect(15, GPIO.FALLING, callback=handle_button_input)
-GPIO.add_event_detect(33, GPIO.FALLING, callback=handle_button_input)
-GPIO.add_event_detect(31, GPIO.FALLING, callback=handle_button_input)
-GPIO.add_event_detect(29, GPIO.FALLING, callback=handle_button_input)
-GPIO.add_event_detect(18, GPIO.FALLING, callback=handle_button_input)
-GPIO.add_event_detect(16, GPIO.FALLING, callback=handle_button_input)
-GPIO.add_event_detect(37, GPIO.FALLING, callback=handle_button_input)
-GPIO.add_event_detect(36, GPIO.FALLING, callback=handle_button_input)
-GPIO.add_event_detect(32, GPIO.FALLING, callback=handle_button_input)
-GPIO.add_event_detect(22, GPIO.FALLING, callback=handle_button_input)
-GPIO.add_event_detect(13, GPIO.BOTH, callback=handle_flare_glitch)
-GPIO.add_event_detect(11, GPIO.BOTH, callback=handle_flare_glitch)
+if running_on_pi:
+    GPIO.add_event_detect(12, GPIO.FALLING, callback=handle_button_input)
+    GPIO.add_event_detect(15, GPIO.FALLING, callback=handle_button_input)
+    GPIO.add_event_detect(33, GPIO.FALLING, callback=handle_button_input)
+    GPIO.add_event_detect(31, GPIO.FALLING, callback=handle_button_input)
+    GPIO.add_event_detect(29, GPIO.FALLING, callback=handle_button_input)
+    GPIO.add_event_detect(18, GPIO.FALLING, callback=handle_button_input)
+    GPIO.add_event_detect(16, GPIO.FALLING, callback=handle_button_input)
+    GPIO.add_event_detect(37, GPIO.FALLING, callback=handle_button_input)
+    GPIO.add_event_detect(36, GPIO.FALLING, callback=handle_button_input)
+    GPIO.add_event_detect(32, GPIO.FALLING, callback=handle_button_input)
+    GPIO.add_event_detect(22, GPIO.FALLING, callback=handle_button_input)
+    GPIO.add_event_detect(13, GPIO.BOTH, callback=handle_flare_glitch)
+    GPIO.add_event_detect(11, GPIO.BOTH, callback=handle_flare_glitch)
 
 while True:
     if flare:
