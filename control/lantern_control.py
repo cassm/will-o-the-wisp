@@ -170,7 +170,7 @@ def skies(pixels, paletteName, timeFactor, spaceFactor, cloud_interval, start_pi
     for ii in range(start_pixel, end_pixel):
         colour_factors = tuple((math.sin(effective_time/-5 + coords.globalCartesian[ii][0]*0.25 + coords.globalCartesian[ii][1]*0.05 + 0.2*i) + math.sin(effective_time/-3 + coords.globalCartesian[ii][0])/4) / 4 + 1 for i in range (4))
         rgbw_val = list(channel * colour_factors[i] for i, channel in enumerate(palettes[paletteName][int((effective_time*timeFactor + originDelta[ii]) % len(palettes[paletteName]))]))
-        rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate, flare_level)
+        rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate, flare_level, glitch)
 
 def loot_cave(pixels, start_pixel = 0, end_pixel = n_pixels):
     # how many sine wave cycles are squeezed into our n_pixels
@@ -201,7 +201,7 @@ def loot_cave(pixels, start_pixel = 0, end_pixel = n_pixels):
         b = blackstripes * color_utils.remap(math.cos((t/speed_b + pct*freq_b)*math.pi*2), -1, 1, 0, 256)
         w = blackstripes * color_utils.remap(math.cos((t/speed_w + pct*freq_w)*math.pi*2), -1, 1, 0, 256)
 
-        rgbw_utils.set_pixel(pixels, ii, (g, r, b, w), simulate, flare_level)
+        rgbw_utils.set_pixel(pixels, ii, (g, r, b, w), simulate, flare_level, glitch)
 
 def star_drive(pixels, spaceFactor, flashSpeed, colourSpeed, paletteName, start_pixel = 0, end_pixel = n_pixels):
     for ii in range(n_pixels):
@@ -211,7 +211,7 @@ def star_drive(pixels, spaceFactor, flashSpeed, colourSpeed, paletteName, start_
         newVal = list(mixLevel * channel for channel in palettes[paletteName][paletteIndex])
         newVal[3] = (math.sin(spaceSum + effective_time*flashSpeed) * 0.75 + 0.25) * 512
 
-        rgbw_utils.set_pixel(pixels, ii, newVal, simulate, flare_level)
+        rgbw_utils.set_pixel(pixels, ii, newVal, simulate, flare_level, glitch)
 
 def vertical_star_drive(pixels, localSpaceFactor, lanternSpaceFactor, flashSpeed, colourSpeed, paletteName, start_pixel = 0, end_pixel = n_pixels):
     for ii in range(n_pixels):
@@ -228,7 +228,7 @@ def vertical_star_drive(pixels, localSpaceFactor, lanternSpaceFactor, flashSpeed
         newVal = list(mixLevel * channel for channel in palettes[paletteName][paletteIndex])
         newVal[3] = (math.sin(cyclePoint) * 0.75 + 0.25) * 255
 
-        rgbw_utils.set_pixel(pixels, ii, newVal, simulate, flare_level)
+        rgbw_utils.set_pixel(pixels, ii, newVal, simulate, flare_level, glitch)
 
 next_drop = [0.0 for i in range(len(coords.lanternLocations))]
 
@@ -244,7 +244,7 @@ def rain(pixels, rainInterval, shimmerLevel):
 
         new_value = tuple(max(fg_colour[channel], bg_colour[channel]) for channel in range(4))
 
-        rgbw_utils.set_pixel(pixels, ii, new_value, simulate, flare_level)
+        rgbw_utils.set_pixel(pixels, ii, new_value, simulate, flare_level, glitch)
 
     for lantern in range(len(coords.lanternLocations)):
         if effective_time > next_drop[lantern]:
@@ -263,7 +263,7 @@ def colourWaves(pixels, palette, timeSpeed, colourSpeed):
         palette_index = int((effective_time*-20*timeSpeed + coords.originDelta[ii]*20*colourSpeed) % len(palettes[palette]))
         rgbw_val = list(channel * mix_level for channel in palettes[palette][palette_index])
         rgbw_val[3] += w_level
-        rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate, flare_level)
+        rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate, flare_level, glitch)
 
 active_swooshes = [[] for i in range(n_lanterns)]
 next_swoosh = 0
@@ -293,10 +293,13 @@ def make_me_one(pixels, shimmerLevel, whiteLevel, swoosh_interval):
 
         w = max(w, swoosh_level*255)
 
-        rgbw_utils.set_pixel(pixels, ii, (g, r, b, w), simulate, flare_level)
+        rgbw_utils.set_pixel(pixels, ii, (g, r, b, w), simulate, flare_level, glitch)
 
 def rainbow_sparklesGetPixelColour(rgb0, rgb1, rgb2, waveOffset, random_values, ii):
-    t = time.time()*0.6
+    if glitch:
+        t = effective_time*0.6
+    else:
+        t = time.time()*0.6
 
     if random_values[ii] < 0.5:
         g, r, b, w = tuple(rgb0[channel] / 128.0 for channel in range(4))
@@ -328,16 +331,14 @@ def rainbow_sparklesGetPixelColour(rgb0, rgb1, rgb2, waveOffset, random_values, 
     #pixels[ii] =  (g*256, r*256, b*256)
 
 def rainbow_sparkles(pixels):
-    offsetMultiplier = 1.0/7
+    offsetMultiplier = 1.0/5
     for ii in range(n_pixels):
         total = rainbow_sparklesGetPixelColour(colours.hardPink, colours.crimson, colours.neonRose, 0.0, random_values0, ii)
-        total = map(add, total, rainbow_sparklesGetPixelColour(colours.orange, colours.brightOrange, colours.lightOrange, offsetMultiplier*1, random_values1, ii))
-        total = map(add, total, rainbow_sparklesGetPixelColour(colours.paleYellow, colours.brightYellow, colours.lightOrange, offsetMultiplier*2, random_values2, ii))
-        total = map(add, total, rainbow_sparklesGetPixelColour(colours.mint, colours.lime, colours.aqua, offsetMultiplier*3, random_values3, ii))
-        total = map(add, total, rainbow_sparklesGetPixelColour(colours.cobalt, colours.sky, colours.indigo, offsetMultiplier*4, random_values4, ii))
-        total = map(add, total, rainbow_sparklesGetPixelColour(colours.indigo, colours.neonPurple, colours.imperialPurple, offsetMultiplier*5, random_values5, ii))
-        total = map(add, total, rainbow_sparklesGetPixelColour(colours.lilac, colours.neonPurple, colours.neonRose, offsetMultiplier*6, random_values6, ii))
-        rgbw_utils.set_pixel(pixels, ii, total, simulate, flare_level)
+        total = map(add, total, rainbow_sparklesGetPixelColour(colours.mint, colours.lime, colours.aqua, offsetMultiplier*1, random_values3, ii))
+        total = map(add, total, rainbow_sparklesGetPixelColour(colours.cobalt, colours.sky, colours.indigo, offsetMultiplier*2, random_values4, ii))
+        total = map(add, total, rainbow_sparklesGetPixelColour(colours.indigo, colours.neonPurple, colours.imperialPurple, offsetMultiplier*3, random_values5, ii))
+        total = map(add, total, rainbow_sparklesGetPixelColour(colours.lilac, colours.neonPurple, colours.neonRose, offsetMultiplier*4, random_values6, ii))
+        rgbw_utils.set_pixel(pixels, ii, total, simulate, flare_level, glitch)
 
 next_sparks = [0.0 for i in range(n_lanterns)]
 last_sparks = [0.0 for i in range(n_pixels)]
@@ -371,7 +372,7 @@ def fire(pixels, spark_interval):
         palette_index = int(max(min(base_fire_indices[pixel_index] + spark_val + sine_val, fire_palette_len-1), 0))
         g, r, b, w = palettes["fire"][palette_index]
 
-        rgbw_utils.set_pixel(pixels, ii, (g*0.5, r, b + math.sin(effective_time/-9.7 + originDelta[ii])*8, w + math.sin(effective_time/-4 + originDelta[ii])*64), simulate, flare_level)
+        rgbw_utils.set_pixel(pixels, ii, (g*0.5, r, b + math.sin(effective_time/-9.7 + originDelta[ii])*8, w + math.sin(effective_time/-4 + originDelta[ii])*64), simulate, flare_level, glitch)
 
 
 current_palette_id = 0
@@ -497,10 +498,7 @@ if running_on_pi:
 
 while True:
     if flare:
-        print "FLARE"
         last_flare_event = effective_time
-    if glitch:
-        print "GLITCH"
 
     if time.time()-last_mode_switch > auto_mode_interval:
         last_mode_switch = time.time()
@@ -528,8 +526,9 @@ while True:
         speed_val = max(float(srl_speed_val) / float(srl_max_val), 0.00001)*8 # between 0 and 8
         brightness_val = (max(float(srl_brightness_val) / float(srl_max_val), 0.00001)**2.2)*2
 
-    effective_time += (time.time() - last_measured_time) * speed_val
-    last_measured_time = time.time()
+    if not glitch:
+        effective_time += (time.time() - last_measured_time) * speed_val
+        last_measured_time = time.time()
 
     if current_pattern_id == 0:
         loot_cave(pixel_buffer)
