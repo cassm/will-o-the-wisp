@@ -290,11 +290,11 @@ last_sparks = [0.0 for i in range(n_pixels)]
 spark_intensities = [0.0 for i in range(n_pixels)]
 
 fire_palette_len = len(palettes["fire"])
-max_normalised_z = max(tuple(pixel[2] for pixel in coords.normalisedCartesian))
-min_normalised_z = min(tuple(pixel[2] for pixel in coords.normalisedCartesian))
-z_fire_conversion_factor = fire_palette_len/2 / (max_normalised_z - min_normalised_z)
+max_normalised_z = max(tuple(pixel[2]*-1 for pixel in coords.normalisedCartesian))
+min_normalised_z = min(tuple(pixel[2]*-1 for pixel in coords.normalisedCartesian))
+z_fire_conversion_factor = fire_palette_len/1 / (max_normalised_z - min_normalised_z)
 
-base_fire_indices = tuple(((coord[2] - min_normalised_z) * z_fire_conversion_factor) + fire_palette_len/2 for coord in coords.normalisedCartesian)
+base_fire_indices = tuple(((coord[2]*-1 - min_normalised_z) * z_fire_conversion_factor) + fire_palette_len/2 for coord in coords.normalisedCartesian)
 
 def fire(pixels, spark_interval):
     global next_sparks
@@ -311,11 +311,13 @@ def fire(pixels, spark_interval):
 
     for ii in range(n_pixels):
         pixel_index = ii % pixels_per_lantern
+        lantern_index = ii / pixels_per_lantern
         spark_val = inverse_square(last_sparks[ii], effective_time, 1.2) * spark_intensities[ii]
-        sine_val = ((math.sin(effective_time/-11) + math.sin(effective_time/-5)/4 + math.sin(coords.spherical[pixel_index][1])/8)+1.375) * fire_palette_len/32
-        palette_index = int(max(min(base_fire_indices[pixel_index] + max(spark_val, sine_val), fire_palette_len-1), 0))
+        sine_val = (math.sin(effective_time/(-1 + 0.03*lantern_index)) + math.sin(effective_time/-(0.4 + 0.02*lantern_index))/4 + math.sin(coords.spherical[pixel_index][1])/3 + math.sin(effective_time/-2 + coords.globalCartesian[ii][0])) * fire_palette_len/16
+        palette_index = int(max(min(base_fire_indices[pixel_index] + spark_val + sine_val, fire_palette_len-1), 0))
+        g, r, b, w = palettes["fire"][palette_index]
 
-        rgbw_utils.set_pixel(pixels, ii, palettes["fire"][palette_index], simulate, flare_level)
+        rgbw_utils.set_pixel(pixels, ii, (g*0.5, r, b + math.sin(effective_time/-9.7 + originDelta[ii])*8, w + math.sin(effective_time/-4 + originDelta[ii])*64), simulate, flare_level)
 
 
 current_palette_id = 0
@@ -395,7 +397,8 @@ def handle_button_input(channel):
             current_pattern_id = 3
             last_flare_event = effective_time
         elif channel == 32:
-            print "BM"
+            print "Sacred Fuckin Flame"
+            current_pattern_id = 6
             last_flare_event = effective_time
         elif channel == 22:
             print "BR"
