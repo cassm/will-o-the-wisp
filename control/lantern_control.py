@@ -164,12 +164,34 @@ def x_sin(pixels):
         rgbw_utils.set_pixel(pixels, ii, pixel, simulate, flare_level)
 
 def inverse_square(x, y, exponent):
-    return (1.0/(abs(x - y)**exponent))
+    return (1.0/max(abs(x - y)**exponent, 0.001))
 
-def paletteViewer(pixels, paletteName, timeFactor, spaceFactor, start_pixel = 0, end_pixel = n_pixels):
+clouds = []
+next_cloud = 0
+
+def skies(pixels, paletteName, timeFactor, spaceFactor, cloud_interval, start_pixel = 0, end_pixel = n_pixels):
+    global next_cloud
+    global clouds
+
+    if effective_time > next_cloud:
+        next_cloud = effective_time + random.gauss(cloud_interval, cloud_interval/4)
+        # time, cloud magnitude, sideways sine length, sideways sine speed, lengthways sine length, lengthways sine length
+        clouds.append((effective_time, random.uniform(-4, 2), random.randrange(5, 20), random.uniform(-0.5, 0.5), random.randrange(10, 30), random.uniform(-2, 2)))
+
+    clouds = list(cloud for cloud in clouds if not inverse_square(effective_time, cloud[0]+10, 1.2)*cloud[1] > 0.01)
+
     for ii in range(start_pixel, end_pixel):
         spaceSum = sum(tuple(globalCartesian[ii][component] * spaceFactor[component] for component in range(3)))
-        rgbw_utils.set_pixel(pixels, ii, palettes[paletteName][int((effective_time*timeFactor + spaceSum) % len(palettes[paletteName]))], simulate, flare_level)
+        cloud_sum = 0
+        for cloud in clouds:
+            cloud_val = inverse_square(effective_time-cloud[0], globalCartesian[ii][0]+10, 1.2)*cloud[1] * math.sin((effective_time-cloud[0])*cloud[3] + globalCartesian[ii][1]*cloud[2]) * math.sin((effective_time-cloud[0])*cloud[5] + globalCartesian[ii][0]*cloud[4])
+            if cloud[0] < 0:
+                cloud_sum += min(cloud_val, 0)
+            else:
+                cloud_sum += max(cloud_val, 0)
+        # cloud_sum = max(sum(list(inverse_square(effective_time-cloud[0], globalCartesian[ii][0]+10, 2)*cloud[1] * math.sin(effective_time-cloud[0]*cloud[3] + globalCartesian[ii][1]*cloud[2]) for cloud in clouds)), 0)
+        rgbw_val = list(channel - cloud_sum*16 for channel in palettes[paletteName][int((effective_time*timeFactor + spaceSum) % len(palettes[paletteName]))])
+        rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate, flare_level)
 
 def loot_cave(pixels, start_pixel = 0, end_pixel = n_pixels):
     # how many sine wave cycles are squeezed into our n_pixels
@@ -289,7 +311,7 @@ paletteTimer = time.time()
 speed_val = 1.0
 brightness_val = 0.5
 
-current_pattern_id = 3
+current_pattern_id = 1
 max_pattern_id = 5
 last_press = 0
 debounce_interval = 0.25
@@ -433,7 +455,7 @@ while True:
     if current_pattern_id == 0:
         loot_cave(pixel_buffer)
     elif current_pattern_id == 1:
-        paletteViewer(pixel_buffer, palettes.keys()[current_palette_id], 25, (-10, 0, 0))
+        skies(pixel_buffer, palettes.keys()[current_palette_id], 25, (-10, 0, 0), 5)
     elif current_pattern_id == 2:
         vertical_star_drive(pixel_buffer, (0.0, 0.0, -1.0), (0.0, 0.0, 2.0), 1, 50, "unicornBarf")
     elif current_pattern_id == 3:
