@@ -34,14 +34,15 @@ sphericalRadians = []
 for coordinate in spherical:
     phi = math.radians(coordinate[1])
     theta = math.radians(coordinate[0])
-    sphericalRadians.append((round(phi, 4), round(theta, 4)))
+    sphericalRadians.append((phi, theta))
+    # sphericalRadians.append((round(phi, 4), round(theta, 4)))
 
 for lanternIndex, location in enumerate(lanternLocations):
     lanternCartesian = []
 
     for phi, theta in sphericalRadians:
-        x = round(lanternRadii[lanternIndex] * math.sin(phi) * math.cos(theta), 4)
-        y = round(lanternRadii[lanternIndex] * math.sin(phi) * math.sin(theta), 4)
+        x = round(lanternRadii[lanternIndex] * math.sin(phi%3.1416) * math.cos(theta), 4)
+        y = round(lanternRadii[lanternIndex] * math.sin(phi%3.1416) * math.sin(theta), 4)
         z = round(lanternRadii[lanternIndex] * math.cos(phi), 4)
 
         lanternCartesian.append((x, y, z))
