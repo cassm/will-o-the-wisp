@@ -350,6 +350,7 @@ def increment_palette(randomise):
 def handle_button_input(channel):
     global last_press
     global last_flare_event
+    global last_mode_switch
     global current_pattern_id
 
     if time.time() - last_press > debounce_interval:
