@@ -153,13 +153,6 @@ fps = 60         # frames per second
 pixel_buffer = [[0.0, 0.0, 0.0] for i in range(buffer_size)]
 last_raindrops = [(0.0, 0.0, 0.0, 0.0, 0.0)for i in range(n_pixels)]
 
-def x_sin(pixels):
-    for ii in range(n_pixels):
-        offsets = [0.1, 0.2, 0.0, 0.3]
-        pixel =  tuple(math.sin(coords.globalCartesian[ii][0] + effective_time/3 + offset)*256 for offset in offsets)
-
-        rgbw_utils.set_pixel(pixels, ii, pixel, simulate, flare_level)
-
 def inverse_square(x, y, exponent):
     return (1.0/max(abs(x - y)**exponent, 0.001))
 
@@ -227,13 +220,6 @@ def vertical_star_drive(pixels, localSpaceFactor, lanternSpaceFactor, flashSpeed
 
         rgbw_utils.set_pixel(pixels, ii, newVal, simulate, flare_level)
 
-def fade_from_to(from_val, to_val, rate):
-    result = []
-    for i in range(4):
-        result.append(from_val[i] + (to_val[i]-from_val[i])*rate)
-
-    return result
-
 next_drop = [0.0 for i in range(len(coords.lanternLocations))]
 
 def rain(pixels, rainInterval, shimmerLevel):
@@ -269,8 +255,6 @@ def colourWaves(pixels, palette, timeSpeed, colourSpeed):
         rgbw_val[3] += w_level
         rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate, flare_level)
 
-# time, direction
-# last_swoosh = [(0.0, 0) for i in range(n_lanterns)]
 active_swooshes = [[] for i in range(n_lanterns)]
 next_swoosh = 0
 
@@ -280,17 +264,16 @@ def make_me_one(pixels, shimmerLevel, whiteLevel, swoosh_interval):
 
     if effective_time > next_swoosh:
         next_swoosh = effective_time + random.gauss(swoosh_interval, swoosh_interval/4)
+        # time, direction (phi or theta)
         active_swooshes[random.randrange(n_lanterns)].append((effective_time, random.randrange(2)))
 
     active_swooshes = list(list(swoosh for swoosh in lantern if effective_time - swoosh[0] < 240) for lantern in active_swooshes)
 
     for ii in range(n_pixels):
-        # shimmerLevel = shimmerLevel * (((math.sin(effective_time/-2.5 + originDelta[ii]*0.5)+1)/2) + (math.sin(effective_time*-1.5 + originDelta[ii]*0.5)/4))
         r = max(math.sin(effective_time/-2 + originDelta[ii]*(5+math.cos(effective_time/2 + originDelta[ii]))) * shimmerLevel, 0)
         g = max(math.sin(effective_time/-2 + originDelta[ii]*(5+math.cos(effective_time/2.2 + originDelta[ii]))) * shimmerLevel, 0)
         b = max(math.sin(effective_time/-2 + originDelta[ii]*(5+math.cos(effective_time/2.5 + originDelta[ii]))) * shimmerLevel, 0)
         w = whiteLevel + math.sin(effective_time/-8 + originDelta[ii]/3)*shimmerLevel + math.sin(effective_time/-10 + originDelta[ii]/1.4)*shimmerLevel/4 - sum((r, g, b))
-        # w = 0
 
         lantern_id = int(ii / pixels_per_lantern)
         pixel_id = int(ii % pixels_per_lantern)
@@ -302,7 +285,6 @@ def make_me_one(pixels, shimmerLevel, whiteLevel, swoosh_interval):
 
         rgbw_utils.set_pixel(pixels, ii, (g, r, b, w), simulate, flare_level)
 
-# currentPalette = random.choice(palettes.keys())
 current_palette_id = 0
 paletteTimer = time.time()
 
@@ -359,12 +341,11 @@ def handle_button_input(channel):
         elif channel == 29:
             print "Make me one with everything"
             current_pattern_id = 4
-            # last_flare_event = time.time()
             for lantern in range(n_lanterns):
                 active_swooshes[lantern].append((effective_time-20, 1))
             last_flare_event = effective_time
         elif channel == 18:
-            print "Ego death"
+            print "Crunchy"
             current_pattern_id = 5
             last_flare_event = effective_time
         elif channel == 16:
@@ -373,7 +354,7 @@ def handle_button_input(channel):
             if current_pattern_id == 5 or current_pattern_id == 1:
                 last_flare_event = effective_time
         elif channel == 37:
-            print "The most beautiful skies"
+            print "Smooth"
             current_pattern_id = 1
             last_flare_event = effective_time
         elif channel == 36:
@@ -414,7 +395,7 @@ if running_on_pi:
 
 while True:
     if flare:
-        # print "FLARE"
+        print "FLARE"
         last_flare_event = effective_time
     if glitch:
         print "GLITCH"
@@ -425,14 +406,15 @@ while True:
             new_mode = random.randrange(max_pattern_id)
             while new_mode == current_pattern_id:
                 new_mode = random.randrange(max_pattern_id)
+
+            if new_mode == 1 or new_mode == 5:
+                increment_palette(True)
+
             current_pattern_id = new_mode
             last_flare_event = effective_time
 
-
     flare_level = 512.0 * (1 / (max(((effective_time - last_flare_event)*2)**1.5, 1)**2.2))
-    # if time.time() - paletteTimer > 240:
-        # currentPalette = random.choice(palettes.keys())
-        # paletteTimer = time.time()
+
     if serial_initialised:
         try:
             srl.write('x')
@@ -446,10 +428,6 @@ while True:
 
     effective_time += (time.time() - last_measured_time) * speed_val
     last_measured_time = time.time()
-
-    # for ii in range(n_pixels):
-        # rgbw_utils.set_pixel(pixel_buffer, ii, (0, 0, 0, 255*inverse_square(coords.spherical[int(ii%60)][1]+20, (time.time()*12) % 80, 2.5)), simulate, flare_level)
-        # rgbw_utils.set_pixel(pixel_buffer, ii, (0, 0, 0, 255*coords.localCartesian[int(ii / 60)][int(ii % 60)][2]), simulate, flare_level)
 
     if current_pattern_id == 0:
         loot_cave(pixel_buffer)
@@ -466,6 +444,6 @@ while True:
 
     pixel_buffer_corrected = tuple(tuple(channel * brightness_val for channel in pixel) for pixel in pixel_buffer)
     client.put_pixels(pixel_buffer_corrected, channel=0)
-    # client.put_pixels(pixel_buffer, channel=0)
+
     time.sleep(1 / fps)
 
