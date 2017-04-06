@@ -6,6 +6,7 @@ import math
 import glob
 import random
 from PIL import Image
+from operator import add
 import atexit
 import serial
 import sys
@@ -45,6 +46,7 @@ sys.path.insert(0, cwd+"/openpixelcontrol/python")
 import opc
 import color_utils
 import rgbw_utils
+import colours
 
 # allow manipulation of time through potentiometer
 last_measured_time = time.time()
@@ -152,6 +154,14 @@ fps = 60         # frames per second
 
 pixel_buffer = [[0.0, 0.0, 0.0] for i in range(buffer_size)]
 last_raindrops = [(0.0, 0.0, 0.0, 0.0, 0.0)for i in range(n_pixels)]
+
+random_values0 = [random.random() for ii in range(n_pixels)]
+random_values1 = [random.random() for ii in range(n_pixels)]
+random_values2 = [random.random() for ii in range(n_pixels)]
+random_values3 = [random.random() for ii in range(n_pixels)]
+random_values4 = [random.random() for ii in range(n_pixels)]
+random_values5 = [random.random() for ii in range(n_pixels)]
+random_values6 = [random.random() for ii in range(n_pixels)]
 
 def inverse_square(x, y, exponent):
     return (1.0/max(abs(x - y)**exponent, 0.001))
@@ -285,6 +295,50 @@ def make_me_one(pixels, shimmerLevel, whiteLevel, swoosh_interval):
 
         rgbw_utils.set_pixel(pixels, ii, (g, r, b, w), simulate, flare_level)
 
+def rainbow_sparklesGetPixelColour(rgb0, rgb1, rgb2, waveOffset, random_values, ii):
+    t = time.time()*0.6
+
+    if random_values[ii] < 0.5:
+        g, r, b, w = tuple(rgb0[channel] / 128.0 for channel in range(4))
+    elif random_values[ii] < 0.85:
+        g, r, b, w = tuple(rgb1[channel] / 128.0 for channel in range(4))
+    else:
+        g, r, b, w = tuple(rgb2[channel] / 128.0 for channel in range(4))
+
+    # twinkle occasional LEDs
+    twinkle_speed = 0.03
+    twinkle_density = 4
+    twinkle = (random_values[ii]*7 + time.time()*twinkle_speed) % 1
+    twinkle = abs(twinkle*2 - 1)
+    twinkle = color_utils.remap(twinkle, 0, 1, -1/twinkle_density, 1.1)
+    twinkle = color_utils.clamp(twinkle, -0.5, 1.1)
+    twinkle **= 5
+    twinkle *= color_utils.cos(t - coords.originDelta[ii], offset=waveOffset, period=7, minn=0.1, maxx=1.0) ** 20
+    twinkle = color_utils.clamp(twinkle, -0.3, 1)
+    r *= twinkle
+    g *= twinkle
+    b *= twinkle
+    w *= twinkle
+
+    # apply gamma curve
+    # only do this on live leds, not in the simulator
+    #r, g, b = color_utils.gamma((r, g, b), 2.2)
+
+    return (g*256, r*256, b*256, w*256)
+    #pixels[ii] =  (g*256, r*256, b*256)
+
+def rainbow_sparkles(pixels):
+    offsetMultiplier = 1.0/7
+    for ii in range(n_pixels):
+        total = rainbow_sparklesGetPixelColour(colours.hardPink, colours.crimson, colours.neonRose, 0.0, random_values0, ii)
+        total = map(add, total, rainbow_sparklesGetPixelColour(colours.orange, colours.brightOrange, colours.lightOrange, offsetMultiplier*1, random_values1, ii))
+        total = map(add, total, rainbow_sparklesGetPixelColour(colours.paleYellow, colours.brightYellow, colours.lightOrange, offsetMultiplier*2, random_values2, ii))
+        total = map(add, total, rainbow_sparklesGetPixelColour(colours.mint, colours.lime, colours.aqua, offsetMultiplier*3, random_values3, ii))
+        total = map(add, total, rainbow_sparklesGetPixelColour(colours.cobalt, colours.sky, colours.indigo, offsetMultiplier*4, random_values4, ii))
+        total = map(add, total, rainbow_sparklesGetPixelColour(colours.indigo, colours.neonPurple, colours.imperialPurple, offsetMultiplier*5, random_values5, ii))
+        total = map(add, total, rainbow_sparklesGetPixelColour(colours.lilac, colours.neonPurple, colours.neonRose, offsetMultiplier*6, random_values6, ii))
+        rgbw_utils.set_pixel(pixels, ii, total, simulate, flare_level)
+
 next_sparks = [0.0 for i in range(n_lanterns)]
 last_sparks = [0.0 for i in range(n_pixels)]
 spark_intensities = [0.0 for i in range(n_pixels)]
@@ -326,8 +380,8 @@ paletteTimer = time.time()
 speed_val = 1.0
 brightness_val = 0.5
 
-current_pattern_id = 6
-max_pattern_id = 6
+current_pattern_id = 0
+max_pattern_id = 7
 last_press = 0
 debounce_interval = 0.25
 
@@ -411,7 +465,8 @@ def handle_button_input(channel):
             last_mode_switch = time.time()
             last_flare_event = effective_time
         elif channel == 22:
-            print "BR"
+            print "Unicorn Barf"
+            current_pattern_id = 7
             last_mode_switch = time.time()
             last_flare_event = effective_time
 
@@ -490,6 +545,8 @@ while True:
         colourWaves(pixel_buffer, palettes.keys()[current_palette_id], 1, 1)
     elif current_pattern_id == 6:
         fire(pixel_buffer, 0.2)
+    elif current_pattern_id == 7:
+        rainbow_sparkles(pixel_buffer)
 
     pixel_buffer_corrected = tuple(tuple(channel * brightness_val for channel in pixel) for pixel in pixel_buffer)
     client.put_pixels(pixel_buffer_corrected, channel=0)
