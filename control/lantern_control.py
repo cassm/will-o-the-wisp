@@ -154,6 +154,7 @@ if simulate:
 fps = 60         # frames per second
 
 pixel_buffer = [[0.0, 0.0, 0.0] for i in range(buffer_size)]
+last_raindrops = [(0.0, 0.0, 0.0, 0.0, 0.0)for i in range(n_pixels)]
 
 def x_sin(pixels):
     for ii in range(n_pixels):
@@ -241,11 +242,13 @@ def rain(pixels, rainInterval, shimmerLevel):
     global next_drop
 
     for ii in range(n_pixels):
-        r = math.sin(effective_time/-1 + originDelta[ii]*5) * shimmerLevel
-        g = math.sin(effective_time/-2 + originDelta[ii]*5) * shimmerLevel
-        b = math.sin(effective_time/-3 + originDelta[ii]*5) * shimmerLevel
+        time_coefficients = [-1, -1.1, -1.2]
+        bg_colour = list(math.sin(effective_time/coefficient + originDelta[ii]*5) * shimmerLevel for coefficient in time_coefficients)
+        bg_colour.append(128)
+        drop_intensity = inverse_square(effective_time, last_raindrops[ii][4], 1.5)
+        fg_colour = tuple(last_raindrops[ii][channel] * drop_intensity for channel in range(4))
 
-        new_value = fade_from_to(rgbw_utils.get_pixel(pixels, ii, simulate), (g, r, b, 128 - sum((g, r, b))), 0.05)
+        new_value = tuple(max(fg_colour[channel], bg_colour[channel]) for channel in range(4))
 
         rgbw_utils.set_pixel(pixels, ii, new_value, simulate, flare_level)
 
@@ -255,9 +258,9 @@ def rain(pixels, rainInterval, shimmerLevel):
             pixel_index = lantern*pixels_per_lantern + random.randrange(pixels_per_lantern)
             rgbw_val = []
             for colour in range(4):
-                rgbw_val.append(random.gauss(255, 16))
-
-            rgbw_utils.set_pixel(pixels, pixel_index, rgbw_val, simulate, flare_level)
+                rgbw_val.append(random.gauss(192, 32))
+            rgbw_val.append(effective_time)
+            last_raindrops[pixel_index] = rgbw_val
 
 def colourWaves(pixels, palette, timeSpeed, colourSpeed):
     for ii in range(n_pixels):
@@ -286,7 +289,7 @@ paletteTimer = time.time()
 speed_val = 1.0
 brightness_val = 0.5
 
-current_pattern_id = 0
+current_pattern_id = 3
 max_pattern_id = 5
 last_press = 0
 debounce_interval = 0.25
