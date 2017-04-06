@@ -140,7 +140,7 @@ print('')
 pixels_per_lantern = 60
 n_lanterns = len(coords.localCartesian)
 n_pixels = pixels_per_lantern * n_lanterns # 60 leds per lantern
-print "num lanterns = " + str(len(coords.localCartesian))
+print "num lanterns = " + str(n_lanterns)
 print "num LEDs = " + str(n_pixels)
 
 buffer_size = rgbw_utils.get_buffer_size(n_pixels)
@@ -285,14 +285,47 @@ def make_me_one(pixels, shimmerLevel, whiteLevel, swoosh_interval):
 
         rgbw_utils.set_pixel(pixels, ii, (g, r, b, w), simulate, flare_level)
 
+next_sparks = [0.0 for i in range(n_lanterns)]
+last_sparks = [0.0 for i in range(n_pixels)]
+spark_intensities = [0.0 for i in range(n_pixels)]
+
+fire_palette_len = len(palettes["fire"])
+max_normalised_z = max(tuple(pixel[2] for pixel in coords.normalisedCartesian))
+min_normalised_z = min(tuple(pixel[2] for pixel in coords.normalisedCartesian))
+z_fire_conversion_factor = fire_palette_len/2 / (max_normalised_z - min_normalised_z)
+
+base_fire_indices = tuple(((coord[2] - min_normalised_z) * z_fire_conversion_factor) + fire_palette_len/2 for coord in coords.normalisedCartesian)
+
+def fire(pixels, spark_interval):
+    global next_sparks
+    global last_sparks
+    global spark_intensities
+
+    for ii in range(n_lanterns):
+        if effective_time > next_sparks[ii]:
+            next_sparks[ii] = effective_time + random.gauss(spark_interval, spark_interval/4)
+
+            pixel_index = ii*pixels_per_lantern + random.randrange(pixels_per_lantern)
+            last_sparks[pixel_index] = effective_time
+            spark_intensities[pixel_index] = random.gauss(fire_palette_len/8, fire_palette_len/16)
+
+    for ii in range(n_pixels):
+        pixel_index = ii % pixels_per_lantern
+        spark_val = inverse_square(last_sparks[ii], effective_time, 1.2) * spark_intensities[ii]
+        sine_val = ((math.sin(effective_time/-11) + math.sin(effective_time/-5)/4 + math.sin(coords.spherical[pixel_index][1])/8)+1.375) * fire_palette_len/32
+        palette_index = int(max(min(base_fire_indices[pixel_index] + max(spark_val, sine_val), fire_palette_len-1), 0))
+
+        rgbw_utils.set_pixel(pixels, ii, palettes["fire"][palette_index], simulate, flare_level)
+
+
 current_palette_id = 0
 paletteTimer = time.time()
 
 speed_val = 1.0
 brightness_val = 0.5
 
-current_pattern_id = 4
-max_pattern_id = 5
+current_pattern_id = 6
+max_pattern_id = 6
 last_press = 0
 debounce_interval = 0.25
 
@@ -441,6 +474,8 @@ while True:
         make_me_one(pixel_buffer, 64, 255, 3)
     elif current_pattern_id == 5:
         colourWaves(pixel_buffer, palettes.keys()[current_palette_id], 1, 1)
+    elif current_pattern_id == 6:
+        fire(pixel_buffer, 0.2)
 
     pixel_buffer_corrected = tuple(tuple(channel * brightness_val for channel in pixel) for pixel in pixel_buffer)
     client.put_pixels(pixel_buffer_corrected, channel=0)
