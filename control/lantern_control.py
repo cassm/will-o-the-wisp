@@ -163,31 +163,10 @@ def x_sin(pixels):
 def inverse_square(x, y, exponent):
     return (1.0/max(abs(x - y)**exponent, 0.001))
 
-clouds = []
-next_cloud = 0
-
 def skies(pixels, paletteName, timeFactor, spaceFactor, cloud_interval, start_pixel = 0, end_pixel = n_pixels):
-    global next_cloud
-    global clouds
-
-    if effective_time > next_cloud:
-        next_cloud = effective_time + random.gauss(cloud_interval, cloud_interval/4)
-        # time, cloud magnitude, sideways sine length, sideways sine speed, lengthways sine length, lengthways sine length
-        clouds.append((effective_time, random.uniform(-4, 2), random.randrange(5, 20), random.uniform(-0.5, 0.5), random.randrange(10, 30), random.uniform(-2, 2)))
-
-    clouds = list(cloud for cloud in clouds if not inverse_square(effective_time, cloud[0]+10, 1.2)*cloud[1] > 0.01)
-
     for ii in range(start_pixel, end_pixel):
-        spaceSum = sum(tuple(globalCartesian[ii][component] * spaceFactor[component] for component in range(3)))
-        cloud_sum = 0
-        for cloud in clouds:
-            cloud_val = inverse_square(effective_time-cloud[0], globalCartesian[ii][0]+10, 1.2)*cloud[1] * math.sin((effective_time-cloud[0])*cloud[3] + globalCartesian[ii][1]*cloud[2]) * math.sin((effective_time-cloud[0])*cloud[5] + globalCartesian[ii][0]*cloud[4])
-            if cloud[0] < 0:
-                cloud_sum += min(cloud_val, 0)
-            else:
-                cloud_sum += max(cloud_val, 0)
-        # cloud_sum = max(sum(list(inverse_square(effective_time-cloud[0], globalCartesian[ii][0]+10, 2)*cloud[1] * math.sin(effective_time-cloud[0]*cloud[3] + globalCartesian[ii][1]*cloud[2]) for cloud in clouds)), 0)
-        rgbw_val = list(channel - cloud_sum*16 for channel in palettes[paletteName][int((effective_time*timeFactor + spaceSum) % len(palettes[paletteName]))])
+        colour_factors = tuple((math.sin(effective_time/-5 + coords.globalCartesian[ii][0]*0.25 + coords.globalCartesian[ii][1]*0.05 + 0.2*i) + math.sin(effective_time/-3 + coords.globalCartesian[ii][0])/4) / 4 + 1 for i in range (4))
+        rgbw_val = list(channel * colour_factors[i] for i, channel in enumerate(palettes[paletteName][int((effective_time*timeFactor + originDelta[ii]) % len(palettes[paletteName]))]))
         rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate, flare_level)
 
 def loot_cave(pixels, start_pixel = 0, end_pixel = n_pixels):
