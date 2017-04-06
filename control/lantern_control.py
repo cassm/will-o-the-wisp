@@ -264,7 +264,7 @@ def rain(pixels, rainInterval, shimmerLevel):
         time_coefficients = [-1, -1.1, -1.2]
         bg_colour = list(math.sin(effective_time/coefficient + originDelta[ii]*5) * shimmerLevel for coefficient in time_coefficients)
         bg_colour.append(128)
-        drop_intensity = inverse_square(effective_time, last_raindrops[ii][4], 1.5)
+        drop_intensity = inverse_square(effective_time, last_raindrops[ii][4], 1.2)
         fg_colour = tuple(last_raindrops[ii][channel] * drop_intensity for channel in range(4))
 
         new_value = tuple(max(fg_colour[channel], bg_colour[channel]) for channel in range(4))
@@ -478,7 +478,7 @@ while True:
     elif current_pattern_id == 2:
         vertical_star_drive(pixel_buffer, (0.0, 0.0, -1.0), (0.0, 0.0, 2.0), 1, 50, "unicornBarf")
     elif current_pattern_id == 3:
-        rain(pixel_buffer, 0.25, 8)
+        rain(pixel_buffer, 0.25, 32)
     elif current_pattern_id == 4:
         make_me_one(pixel_buffer, 64, 255, 1.5)
     elif current_pattern_id == 5:
