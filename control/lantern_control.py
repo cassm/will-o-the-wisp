@@ -356,10 +356,11 @@ def handle_button_input(channel):
         last_press = time.time()
 
         if channel == 15:
-            last_mode_switch = time.time()
             print "AUTO switched"
+            last_mode_switch = time.time()
         elif channel == 12:
             print "RANDOM PATTERN"
+            last_mode_switch = time.time()
             new_pattern_id = random.randrange(max_pattern_id+1)
             while new_pattern_id == current_pattern_id:
                 new_pattern_id = random.randrange(max_pattern_id+1)
@@ -368,40 +369,49 @@ def handle_button_input(channel):
         elif channel == 33:
             print "Fizzy lifting drink"
             current_pattern_id = 0
+            last_mode_switch = time.time()
             last_flare_event = effective_time
         elif channel == 31:
             print "Star drive"
             current_pattern_id = 2
+            last_mode_switch = time.time()
             last_flare_event = effective_time
         elif channel == 29:
             print "Make me one with everything"
             current_pattern_id = 4
+            last_mode_switch = time.time()
             for lantern in range(n_lanterns):
-                active_swooshes[lantern].append((effective_time-20, 1))
+                active_swooshes[lantern].append((effective_time-15, 1))
             last_flare_event = effective_time
         elif channel == 18:
             print "Crunchy"
             current_pattern_id = 5
+            last_mode_switch = time.time()
             last_flare_event = effective_time
         elif channel == 16:
             print "Next Palette"
             increment_palette(False)
             if current_pattern_id == 5 or current_pattern_id == 1:
+                last_mode_switch = time.time()
                 last_flare_event = effective_time
         elif channel == 37:
             print "Smooth"
             current_pattern_id = 1
+            last_mode_switch = time.time()
             last_flare_event = effective_time
         elif channel == 36:
             print "Magic forest but it's raining"
             current_pattern_id = 3
+            last_mode_switch = time.time()
             last_flare_event = effective_time
         elif channel == 32:
             print "Sacred Fuckin Flame"
             current_pattern_id = 6
+            last_mode_switch = time.time()
             last_flare_event = effective_time
         elif channel == 22:
             print "BR"
+            last_mode_switch = time.time()
             last_flare_event = effective_time
 
 def handle_flare_glitch(channel):
