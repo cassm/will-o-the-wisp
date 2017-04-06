@@ -303,23 +303,23 @@ def make_me_one(pixels, shimmerLevel, whiteLevel, swoosh_interval):
         next_swoosh = effective_time + random.gauss(swoosh_interval, swoosh_interval/4)
         active_swooshes[random.randrange(n_lanterns)].append((effective_time, random.randrange(2)))
 
-    active_swooshes = list(list(swoosh for swoosh in lantern if swoosh[0]-effective_time < 120) for lantern in active_swooshes)
+    active_swooshes = list(list(swoosh for swoosh in lantern if effective_time - swoosh[0] < 240) for lantern in active_swooshes)
 
     for ii in range(n_pixels):
         # shimmerLevel = shimmerLevel * (((math.sin(effective_time/-2.5 + originDelta[ii]*0.5)+1)/2) + (math.sin(effective_time*-1.5 + originDelta[ii]*0.5)/4))
-        r = max(math.sin(effective_time/-1 + originDelta[ii]*(5+math.cos(effective_time/2 + originDelta[ii]))) * shimmerLevel, 0)
-        g = max(math.sin(effective_time/-1 + originDelta[ii]*(5+math.cos(effective_time/2.2 + originDelta[ii]))) * shimmerLevel, 0)
-        b = max(math.sin(effective_time/-1 + originDelta[ii]*(5+math.cos(effective_time/2.5 + originDelta[ii]))) * shimmerLevel, 0)
-        w = whiteLevel + math.sin(effective_time/-4 + originDelta[ii]/3)*shimmerLevel + math.sin(effective_time/-5 + originDelta[ii]/1.4)*shimmerLevel/4 - sum((r, g, b))
+        r = max(math.sin(effective_time/-2 + originDelta[ii]*(5+math.cos(effective_time/2 + originDelta[ii]))) * shimmerLevel, 0)
+        g = max(math.sin(effective_time/-2 + originDelta[ii]*(5+math.cos(effective_time/2.2 + originDelta[ii]))) * shimmerLevel, 0)
+        b = max(math.sin(effective_time/-2 + originDelta[ii]*(5+math.cos(effective_time/2.5 + originDelta[ii]))) * shimmerLevel, 0)
+        w = whiteLevel + math.sin(effective_time/-8 + originDelta[ii]/3)*shimmerLevel + math.sin(effective_time/-10 + originDelta[ii]/1.4)*shimmerLevel/4 - sum((r, g, b))
         # w = 0
 
         lantern_id = int(ii / pixels_per_lantern)
         pixel_id = int(ii % pixels_per_lantern)
         swoosh_level = 0
         for swoosh in active_swooshes[lantern_id]:
-            swoosh_level += inverse_square(coords.spherical[pixel_id][swoosh[1]]+30, (effective_time - swoosh[0])*12, 2.5)
+            swoosh_level += inverse_square(coords.spherical[pixel_id][swoosh[1]]+30, (effective_time - swoosh[0])*2, 2.5)
 
-        w = max(w, swoosh_level)
+        w = max(w, swoosh_level*255)
 
         rgbw_utils.set_pixel(pixels, ii, (g, r, b, w), simulate, flare_level)
 
@@ -383,6 +383,7 @@ def handle_button_input(channel):
             # last_flare_event = time.time()
             for lantern in range(n_lanterns):
                 active_swooshes[lantern].append((effective_time-20, 1))
+            last_flare_event = effective_time
         elif channel == 18:
             print "Ego death"
             current_pattern_id = 5
@@ -480,7 +481,7 @@ while True:
     elif current_pattern_id == 3:
         rain(pixel_buffer, 0.25, 32)
     elif current_pattern_id == 4:
-        make_me_one(pixel_buffer, 64, 255, 1.5)
+        make_me_one(pixel_buffer, 64, 255, 3)
     elif current_pattern_id == 5:
         colourWaves(pixel_buffer, palettes.keys()[current_palette_id], 1, 1)
 
