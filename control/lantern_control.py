@@ -308,7 +308,7 @@ def rainbow_sparklesGetPixelColour(rgb0, rgb1, rgb2, waveOffset, random_values, 
     # twinkle occasional LEDs
     twinkle_speed = 0.03
     twinkle_density = 4
-    twinkle = (random_values[ii]*7 + time.time()*twinkle_speed) % 1
+    twinkle = (random_values[ii]*7 + effective_time*twinkle_speed) % 1
     twinkle = abs(twinkle*2 - 1)
     twinkle = color_utils.remap(twinkle, 0, 1, -1/twinkle_density, 1.1)
     twinkle = color_utils.clamp(twinkle, -0.5, 1.1)
@@ -380,7 +380,7 @@ paletteTimer = time.time()
 speed_val = 1.0
 brightness_val = 0.5
 
-current_pattern_id = 0
+current_pattern_id = 7
 max_pattern_id = 7
 last_press = 0
 debounce_interval = 0.25
