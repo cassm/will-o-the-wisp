@@ -316,7 +316,7 @@ def rainbow_sparklesGetPixelColour(rgb0, rgb1, rgb2, waveOffset, random_values, 
     twinkle = color_utils.remap(twinkle, 0, 1, -1/twinkle_density, 1.1)
     twinkle = color_utils.clamp(twinkle, -0.5, 1.1)
     twinkle **= 5
-    twinkle *= color_utils.cos(t - coords.originDelta[ii], offset=waveOffset, period=7, minn=0.1, maxx=1.0) ** 20
+    twinkle *= color_utils.cos(t - coords.originDelta[ii], offset=waveOffset, period=20, minn=0.1, maxx=1.0) ** 20
     twinkle = color_utils.clamp(twinkle, -0.3, 1)
     r *= twinkle
     g *= twinkle
