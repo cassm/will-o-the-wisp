@@ -1,14 +1,14 @@
-
-
-## Creates a gamma-corrected lookup table
+# Creates a gamma-corrected lookup table
 import math
 
-def gamma(nsteps, gamma):
-        gammaedUp = [math.pow(x, gamma) for x in range(nsteps)]
-        return [x/max(gammaedUp) for x in gammaedUp]
 
-def rounder(topValue, gammas):
-        return [min(topValue, round(x*topValue)) for x in gammas]
+def gamma(nsteps, gamma_level):
+        gammaed_up = [math.pow(x, gamma_level) for x in range(nsteps)]
+        return [x/max(gammaed_up) for x in gammaed_up]
+
+
+def rounder(top_value, gammas):
+        return [min(top_value, round(x * top_value)) for x in gammas]
 
 if __name__ == "__main__":
         myGamma = 2.3

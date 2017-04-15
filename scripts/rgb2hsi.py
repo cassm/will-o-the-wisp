@@ -1,11 +1,14 @@
 import math
 
+
 class HSI:
     def __repr__(self):
         return "[{}, {}, {}]".format(self.h, self.s, self.i)
+
     h = 0.0
     s = 0.0
     i = 0.0
+
 
 def rgb2hsi(rgb):
     r = rgb[0]
@@ -14,27 +17,27 @@ def rgb2hsi(rgb):
 
     total = r + g + b
 
-    hsiResult = HSI()
+    hsi_result = HSI()
 
-    minChannel = min(r, g, b)
+    min_channel = min(r, g, b)
 
-    hsiResult.i = (r + g + b) / 3.0
+    hsi_result.i = (r + g + b) / 3.0
 
-    if hsiResult.i == 0:
-        hsiResult.s == 0
+    if hsi_result.i == 0:
+        hsi_result.s = 0
     else:
-        hsiResult.s = 1 - (minChannel/hsiResult.i)
+        hsi_result.s = 1 - (min_channel / hsi_result.i)
 
-    hsiResult.i /= 1023
+    hsi_result.i /= 1023
 
-
-    if (r == g and g == b):
-        hsiResult.h = 0
+    if r == g and g == b:
+        hsi_result.h = 0
 
     else:
-        hsiResult.h = math.acos((r - (0.5 * g) - (0.5 * b)) / math.sqrt((r**2 + g**2 + b**2) - (r*g + r*b + g*b)))
+        hsi_result.h = math.acos(
+            (r - (0.5 * g) - (0.5 * b)) / math.sqrt((r ** 2 + g ** 2 + b ** 2) - (r * g + r * b + g * b)))
 
         if b > g:
-            hsiResult.h = (2*3.14159) - hsiResult.h
+            hsi_result.h = (2 * 3.14159) - hsi_result.h
 
-    return hsiResult
+    return hsi_result
