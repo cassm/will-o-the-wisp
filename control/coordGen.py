@@ -26,35 +26,43 @@ lantern_locations = ((0.0, 0.0, 0.0),
                      (0.88, 0.88, 0.0), (-0.88, 0.88, 0.0),
                      (-0.88, -0.88, 0.0), (0.88, -0.88, 0.0))
 lantern_radii = (0.25, 0.2, 0.2, 0.2, 0.2, 0.15, 0.15, 0.15, 0.15)
+lantern_orientations = (270, 345, 90, 50, 110, 270, 270, 270, 290)
+
 global_cartesian = []
 origin_delta = []
 local_cartesian = []
 spherical_radians = []
 normalised_cartesian = []
 
-for coordinate in spherical:
-    phi = math.radians(coordinate[1])
-    theta = math.radians(coordinate[0])
-    spherical_radians.append((phi, theta))
-    # spherical_radians.append((round(phi, 4), round(theta, 4)))
+for lantern in range(len(lantern_orientations)):
+    lantern_coords = []
+    for coordinate in spherical:
+        phi = math.radians(coordinate[1])
+        theta = math.radians(coordinate[0]-lantern_orientations[lantern])
+        lantern_coords.append((phi, theta))
+        # sphericalRadians.append((round(phi, 4), round(theta, 4)))
+    spherical_radians.append(lantern_coords)
 
-for phi, theta in spherical_radians:
-    x = round(math.sin(phi % 3.1416) * math.cos(theta), 4)
-    y = round(math.sin(phi % 3.1416) * math.sin(theta), 4)
+for phi, theta in spherical_radians[0]:
+    x = round(math.sin(phi%3.1416) * math.cos(theta), 4)
+    y = round(math.sin(phi%3.1416) * math.sin(theta), 4)
     z = round(math.cos(phi), 4)
     normalised_cartesian.append((x, y, z))
 
 for lanternIndex, location in enumerate(lantern_locations):
     lantern_cartesian = []
 
-    for phi, theta in spherical_radians:
-        x = round(lantern_radii[lanternIndex] * math.sin(phi % 3.1416) * math.cos(theta), 4)
-        y = round(lantern_radii[lanternIndex] * math.sin(phi % 3.1416) * math.sin(theta), 4)
+    for phi, theta in spherical_radians[lanternIndex]:
+        x = round(lantern_radii[lanternIndex] * math.sin(phi%3.1416) * math.cos(theta), 4)
+        y = round(lantern_radii[lanternIndex] * math.sin(phi%3.1416) * math.sin(theta), 4)
         z = round(lantern_radii[lanternIndex] * math.cos(phi), 4)
 
         lantern_cartesian.append((x, y, z))
-        global_cartesian.append((location[0] + x, location[1] + y, location[2] + z))
-        origin_delta.append(math.sqrt((location[0] + x) ** 2 + (location[1] + y) ** 2 + (location[2] + z) ** 2))
+        fudge = 1.5
+        if lanternIndex == 0:
+            fudge = 0
+        global_cartesian.append((location[0] + fudge + x, location[1] + y, location[2] + z))
+        origin_delta.append(math.sqrt((location[0] + fudge + x)**2 + (location[1] + y)**2 + (location[2] + z)**2))
 
     local_cartesian.append(lantern_cartesian)
 

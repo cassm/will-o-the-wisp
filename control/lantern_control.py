@@ -326,8 +326,7 @@ def make_me_one(pixels, shimmer_level, white_level, swoosh_interval):
         pixel_id = int(ii % pixels_per_lantern)
         swoosh_level = 0
         for swoosh in active_swooshes[lantern_id]:
-            swoosh_level += inverse_square(coords.spherical[pixel_id][swoosh[1]] + 30, (effective_time - swoosh[0]) * 2,
-                                           2.5)
+            swoosh_level += inverse_square(coords.spherical[lantern_id][pixel_id][swoosh[1]]+30, (effective_time - swoosh[0])*2, 2.5)
 
         w = max(w, swoosh_level * 255)
 
@@ -417,11 +416,8 @@ def fire(pixels, spark_interval):
         pixel_index = ii % pixels_per_lantern
         lantern_index = ii / pixels_per_lantern
         spark_val = inverse_square(last_sparks[ii], effective_time, 1.2) * spark_intensities[ii]
-        sine_val = (math.sin(effective_time / (-1 + 0.03 * lantern_index)) + math.sin(
-            effective_time / -(0.4 + 0.02 * lantern_index)) / 4 + math.sin(
-            coords.spherical[pixel_index][1]) / 3 + math.sin(
-            effective_time / -2 + coords.global_cartesian[ii][0])) * fire_palette_len / 16
-        palette_index = int(max(min(base_fire_indices[pixel_index] + spark_val + sine_val, fire_palette_len - 1), 0))
+        sine_val = (math.sin(effective_time/(-1 + 0.03*lantern_index)) + math.sin(effective_time/-(0.4 + 0.02*lantern_index))/4 + math.sin(coords.spherical[lantern_index][pixel_index][1])/3 + math.sin(effective_time/-2 + coords.globalCartesian[ii][0])) * fire_palette_len/16
+        palette_index = int(max(min(base_fire_indices[pixel_index] + spark_val + sine_val, fire_palette_len-1), 0))
         g, r, b, w = palettes["fire"][palette_index]
 
         rgbw_utils.set_pixel(pixels, ii, (g * 0.5, r, b + math.sin(effective_time / -9.7 + origin_delta[ii]) * 8,
