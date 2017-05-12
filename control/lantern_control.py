@@ -181,7 +181,7 @@ def skies(pixels, palette_name, time_factor, start_pixel=0, end_pixel=n_pixels):
         rgbw_val = list(channel * colour_factors[i] for i, channel in enumerate(
             palettes[palette_name][
                 int((effective_time * time_factor + coords.origin_delta[ii]) % len(palettes[palette_name]))]))
-        rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate, flare_level, glitch)
+        rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate, flare_level)
 
 
 def loot_cave(pixels, start_pixel=0, end_pixel=n_pixels):
@@ -213,7 +213,7 @@ def loot_cave(pixels, start_pixel=0, end_pixel=n_pixels):
         b = blackstripes * color_utils.remap(math.cos((t / speed_b + pct * freq_b) * math.pi * 2), -1, 1, 0, 256)
         w = blackstripes * color_utils.remap(math.cos((t / speed_w + pct * freq_w) * math.pi * 2), -1, 1, 0, 256)
 
-        rgbw_utils.set_pixel(pixels, ii, (g, r, b, w), simulate, flare_level, glitch)
+        rgbw_utils.set_pixel(pixels, ii, (g, r, b, w), simulate, flare_level, invert)
 
 
 def star_drive(pixels, space_factor, flash_speed, colour_speed, palette_name, start_pixel=0, end_pixel=n_pixels):
@@ -225,7 +225,7 @@ def star_drive(pixels, space_factor, flash_speed, colour_speed, palette_name, st
         new_val = list(mix_level * channel for channel in palettes[palette_name][palette_index])
         new_val[3] = (math.sin(space_sum + effective_time * flash_speed) * 0.75 + 0.25) * 512
 
-        rgbw_utils.set_pixel(pixels, ii, new_val, simulate, flare_level, glitch)
+        rgbw_utils.set_pixel(pixels, ii, new_val, simulate, flare_level, invert)
 
 
 def vertical_star_drive(pixels, local_space_factor, lantern_space_factor, flash_speed, colour_speed, palette_name,
@@ -247,7 +247,7 @@ def vertical_star_drive(pixels, local_space_factor, lantern_space_factor, flash_
         new_val = list(mix_level * channel for channel in palettes[palette_name][palette_index])
         new_val[3] = (math.sin(cycle_point) * 0.75 + 0.25) * 255
 
-        rgbw_utils.set_pixel(pixels, ii, new_val, simulate, flare_level, glitch)
+        rgbw_utils.set_pixel(pixels, ii, new_val, simulate, flare_level, invert)
 
 
 next_drop = [0.0 for i in range(len(coords.lantern_locations))]
@@ -266,7 +266,7 @@ def rain(pixels, rain_interval, shimmer_level):
 
         new_value = tuple(max(fg_colour[channel], bg_colour[channel]) for channel in range(4))
 
-        rgbw_utils.set_pixel(pixels, ii, new_value, simulate, flare_level, glitch)
+        rgbw_utils.set_pixel(pixels, ii, new_value, simulate, flare_level, invert)
 
     for lantern in range(len(coords.lantern_locations)):
         if effective_time > next_drop[lantern]:
@@ -288,7 +288,7 @@ def colour_waves(pixels, palette, time_speed, colour_speed):
             (effective_time * -20 * time_speed + coords.origin_delta[ii] * 20 * colour_speed) % len(palettes[palette]))
         rgbw_val = list(channel * mix_level for channel in palettes[palette][palette_index])
         rgbw_val[3] += w_level
-        rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate, flare_level, glitch)
+        rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate, flare_level, invert)
 
 
 active_swooshes = [[] for i in range(n_lanterns)]
@@ -326,14 +326,11 @@ def make_me_one(pixels, shimmer_level, white_level, swoosh_interval):
 
         w = max(w, swoosh_level * 255)
 
-        rgbw_utils.set_pixel(pixels, ii, (g, r, b, w), simulate, flare_level, glitch)
+        rgbw_utils.set_pixel(pixels, ii, (g, r, b, w), simulate, flare_level, invert)
 
 
 def get_sparkle_colour(rgb0, rgb1, rgb2, wave_offset, random_values, ii):
-    if glitch:
-        t = effective_time * 0.6
-    else:
-        t = time.time() * 0.6
+    t = time.time() * 0.6
 
     if random_values[ii] < 0.5:
         g, r, b, w = tuple(rgb0[channel] / 128.0 for channel in range(4))
@@ -381,7 +378,7 @@ def rainbow_sparkles(pixels):
                                        offset_multiplier * 3, random_values5, ii))
         total = map(add, total, get_sparkle_colour(colours.lilac, colours.neon_purple, colours.neon_rose,
                                                    offset_multiplier * 4, random_values6, ii))
-        rgbw_utils.set_pixel(pixels, ii, total, simulate, flare_level, glitch)
+        rgbw_utils.set_pixel(pixels, ii, total, simulate, flare_level, invert)
 
 
 next_sparks = [0.0 for i in range(n_lanterns)]
@@ -424,7 +421,7 @@ def fire(pixels, spark_interval):
 
         rgbw_utils.set_pixel(pixels, ii, (g * 0.5, r, b + math.sin(effective_time / -9.7 + origin_delta[ii]) * 8,
                                           w + math.sin(effective_time / -4 + origin_delta[ii]) * 64), simulate,
-                             flare_level, glitch)
+                             flare_level, invert)
 
 
 current_palette_id = 0
@@ -433,7 +430,7 @@ paletteTimer = time.time()
 speed_val = 1.0
 brightness_val = 0.5
 
-current_pattern_id = 0
+current_pattern_id = 5
 max_pattern_id = 7
 last_press = 0
 debounce_interval = 0.25
@@ -441,7 +438,7 @@ debounce_interval = 0.25
 last_flare_event = 0
 flare_level = 0
 flare = False
-glitch = False
+invert = False
 
 
 def increment_palette(randomise):
@@ -526,15 +523,15 @@ def handle_button_input(channel):
             last_flare_event = effective_time
 
 
-def handle_flare_glitch(channel):
+def handle_flare_invert(channel):
     global flare
-    global glitch
+    global invert
 
     if running_on_pi:
         if channel == 13:
             flare = not GPIO.input(13)
         elif channel == 11:
-            glitch = not GPIO.input(11)
+            invert = not GPIO.input(11)
 
 
 if running_on_pi:
@@ -549,8 +546,8 @@ if running_on_pi:
     GPIO.add_event_detect(36, GPIO.FALLING, callback=handle_button_input)
     GPIO.add_event_detect(32, GPIO.FALLING, callback=handle_button_input)
     GPIO.add_event_detect(22, GPIO.FALLING, callback=handle_button_input)
-    GPIO.add_event_detect(13, GPIO.BOTH, callback=handle_flare_glitch)
-    GPIO.add_event_detect(11, GPIO.BOTH, callback=handle_flare_glitch)
+    GPIO.add_event_detect(13, GPIO.BOTH, callback=handle_flare_invert)
+    GPIO.add_event_detect(11, GPIO.BOTH, callback=handle_flare_invert)
 
 while True:
     if flare:
@@ -582,9 +579,8 @@ while True:
         speed_val = max(float(srl_speed_val) / float(srl_max_val), 0.00001) * 8  # between 0 and 8
         brightness_val = (max(float(srl_brightness_val) / float(srl_max_val), 0.00001) ** 2.2) * 2
 
-    if not glitch:
-        effective_time += (time.time() - last_measured_time) * speed_val
-        last_measured_time = time.time()
+    effective_time += (time.time() - last_measured_time) * speed_val
+    last_measured_time = time.time()
 
     if current_pattern_id == 0:
         loot_cave(pixel_buffer)
