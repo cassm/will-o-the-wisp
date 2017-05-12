@@ -440,17 +440,19 @@ flare_level = 0
 flare = False
 invert = False
 
-
+# do not select fire, as not appropriate for most purposes
 def increment_palette(randomise):
     global current_palette_id
 
     if randomise:
         new_palette_id = random.randrange(len(palettes.keys()))
-        while new_palette_id == current_palette_id:
+        while new_palette_id == current_palette_id or palettes.keys()[new_palette_id] == "fire":
             new_palette_id = random.randrange(len(palettes.keys()))
         current_palette_id = new_palette_id
     else:
         current_palette_id = (current_palette_id + 1) % len(palettes.keys())
+        if palettes.keys()[current_palette_id] == "fire":
+            current_palette_id = (current_palette_id + 1) % len(palettes.keys())
 
 
 def handle_button_input(channel):
@@ -548,6 +550,8 @@ if running_on_pi:
     GPIO.add_event_detect(22, GPIO.FALLING, callback=handle_button_input)
     GPIO.add_event_detect(13, GPIO.BOTH, callback=handle_flare_invert)
     GPIO.add_event_detect(11, GPIO.BOTH, callback=handle_flare_invert)
+
+increment_palette(False)
 
 while True:
     if flare:
