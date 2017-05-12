@@ -186,7 +186,7 @@ def skies(pixels, palette_name, time_factor, start_pixel=0, end_pixel=n_pixels):
         rgbw_val = list(channel * colour_factors[i] for i, channel in enumerate(
             palettes[palette_name][
                 int((effective_time * time_factor + coords.origin_delta[ii]) % len(palettes[palette_name]))]))
-        rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate, flare_level)
+        rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate, flare_level, invert)
 
 
 def loot_cave(pixels, start_pixel=0, end_pixel=n_pixels):
@@ -414,9 +414,9 @@ def fire(pixels, spark_interval):
 
     for ii in range(n_pixels):
         pixel_index = ii % pixels_per_lantern
-        lantern_index = ii / pixels_per_lantern
+        lantern_index = int(ii / pixels_per_lantern)
         spark_val = inverse_square(last_sparks[ii], effective_time, 1.2) * spark_intensities[ii]
-        sine_val = (math.sin(effective_time/(-1 + 0.03*lantern_index)) + math.sin(effective_time/-(0.4 + 0.02*lantern_index))/4 + math.sin(coords.spherical[lantern_index][pixel_index][1])/3 + math.sin(effective_time/-2 + coords.globalCartesian[ii][0])) * fire_palette_len/16
+        sine_val = (math.sin(effective_time/(-1 + 0.03*lantern_index)) + math.sin(effective_time/-(0.4 + 0.02*lantern_index))/4 + math.sin(coords.spherical[lantern_index][pixel_index][1])/3 + math.sin(effective_time/-2 + coords.global_cartesian[ii][0])) * fire_palette_len/16
         palette_index = int(max(min(base_fire_indices[pixel_index] + spark_val + sine_val, fire_palette_len-1), 0))
         g, r, b, w = palettes["fire"][palette_index]
 

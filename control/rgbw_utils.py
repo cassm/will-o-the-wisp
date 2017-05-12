@@ -18,7 +18,7 @@ def set_pixel(pixel_buffer, pixel_index, rgbw_val, simulate, min_level, invert):
             else:
                 channel_value = max(value, min_level)
 
-            pixel_buffer[int(math.floor(channel_index / 3))][int(channel_index % 3)] = max(value, min_level)
+            pixel_buffer[int(math.floor(channel_index / 3))][int(channel_index % 3)] = channel_value
 
 
 def get_pixel(pixel_buffer, pixel_index, simulate=False):
