@@ -69,6 +69,11 @@ srl_speed_val = 512
 srl_brightness_val = 512
 srl_max_val = 738
 
+srl_r_val = 512
+srl_g_val = 512
+srl_b_val = 512
+srl_w_val = 512
+
 try:
     srl = serial.Serial("/dev/ttyACM0",
                         baudrate=57600,
@@ -423,6 +428,10 @@ def fire(pixels, spark_interval):
                                           w + math.sin(effective_time / -4 + origin_delta[ii]) * 64), simulate,
                              flare_level, invert)
 
+def rgbw_sliders(pixels, r_val, g_val, b_val, w_val):
+    for ii in range(n_pixels):
+        rgbw_utils.set_pixel(pixels, ii, (g_val, r_val, b_val, w_val), simulate, flare_level, invert)
+
 
 current_palette_id = 0
 paletteTimer = time.time()
@@ -430,7 +439,12 @@ paletteTimer = time.time()
 speed_val = 1.0
 brightness_val = 0.5
 
-current_pattern_id = 5
+r_val = 128
+g_val = 128
+b_val = 128
+w_val = 128
+
+current_pattern_id = 7
 max_pattern_id = 7
 last_press = 0
 debounce_interval = 0.25
@@ -519,7 +533,8 @@ def handle_button_input(channel):
             last_mode_switch = time.time()
             last_flare_event = effective_time
         elif channel == 22:
-            print("Unicorn Barf")
+            # print("Unicorn Barf")
+            print("RGBW Sliders")
             current_pattern_id = 7
             last_mode_switch = time.time()
             last_flare_event = effective_time
@@ -577,11 +592,20 @@ while True:
             srl.write('x')
             srl_brightness_val = int(srl.readline())
             srl_speed_val = int(srl.readline())
+            srl_r_val = int(srl.readline())
+            srl_g_val = int(srl.readline())
+            srl_b_val = int(srl.readline())
+            srl_w_val = int(srl.readline())
         except Exception as e:
             pass
 
         speed_val = max(float(srl_speed_val) / float(srl_max_val), 0.00001) * 8  # between 0 and 8
         brightness_val = (max(float(srl_brightness_val) / float(srl_max_val), 0.00001) ** 2.2) * 2
+
+        r_val = int(srl_r_val/4)
+        g_val = int(srl_g_val/4)
+        b_val = int(srl_b_val/4)
+        w_val = int(srl_w_val/4)
 
     effective_time += (time.time() - last_measured_time) * speed_val
     last_measured_time = time.time()
@@ -601,7 +625,8 @@ while True:
     elif current_pattern_id == 6:
         fire(pixel_buffer, 0.2)
     elif current_pattern_id == 7:
-        rainbow_sparkles(pixel_buffer)
+        # rainbow_sparkles(pixel_buffer)
+        rgbw_sliders(pixel_buffer, r_val, g_val, b_val, w_val)
 
     pixel_buffer_corrected = tuple(tuple(channel * brightness_val for channel in pixel) for pixel in pixel_buffer)
     client.put_pixels(pixel_buffer_corrected, channel=0)
