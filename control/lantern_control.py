@@ -588,20 +588,20 @@ while True:
             srl.write('x')
             srl_brightness_val = int(srl.readline())
             srl_speed_val = int(srl.readline())
-            srl_r_val = int(srl.readline())
-            srl_g_val = int(srl.readline())
-            srl_b_val = int(srl.readline())
-            srl_w_val = int(srl.readline())
+            srl_r_val = 1024 - int(srl.readline())
+            srl_g_val = 1024 - int(srl.readline())
+            srl_b_val = 1024 - int(srl.readline())
+            srl_w_val = 1024 - int(srl.readline())
         except Exception as e:
             pass
 
         speed_val = max(float(srl_speed_val) / float(srl_max_val), 0.00001) * 8  # between 0 and 8
         brightness_val = (max(float(srl_brightness_val) / float(srl_max_val), 0.00001) ** 2.2) * 2
 
-        r_val = int(srl_r_val/4)
-        g_val = int(srl_g_val/4)
-        b_val = int(srl_b_val/4)
-        w_val = int(srl_w_val/4)
+        r_val = (max(float(srl_r_val) / float(1024), 0.00001) ** 2.2) * 256
+        g_val = (max(float(srl_g_val) / float(1024), 0.00001) ** 2.2) * 256
+        b_val = (max(float(srl_b_val) / float(1024), 0.00001) ** 2.2) * 256
+        w_val = (max(float(srl_w_val) / float(1024), 0.00001) ** 2.2) * 256
 
     effective_time += (time.time() - last_measured_time) * speed_val
     last_measured_time = time.time()
