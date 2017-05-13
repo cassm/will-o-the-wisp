@@ -67,7 +67,6 @@ simulate = not running_on_pi
 serial_initialised = False
 srl_speed_val = 512
 srl_brightness_val = 512
-srl_max_val = 738
 
 srl_r_val = 512
 srl_g_val = 512
@@ -588,20 +587,20 @@ while True:
             srl.write('x')
             srl_brightness_val = int(srl.readline())
             srl_speed_val = int(srl.readline())
-            srl_r_val = 1024 - int(srl.readline())
-            srl_g_val = 1024 - int(srl.readline())
-            srl_b_val = 1024 - int(srl.readline())
-            srl_w_val = 1024 - int(srl.readline())
+            srl_r_val = 1023 - int(srl.readline())
+            srl_g_val = 1023 - int(srl.readline())
+            srl_b_val = 1023 - int(srl.readline())
+            srl_w_val = 1023 - int(srl.readline())
         except Exception as e:
             pass
 
-        speed_val = max(float(srl_speed_val) / float(srl_max_val), 0.00001) * 8  # between 0 and 8
-        brightness_val = (max(float(srl_brightness_val) / float(srl_max_val), 0.00001) ** 2.2) * 2
+        speed_val = max(float(srl_speed_val) / 1023.0, 0.00001) * 8  # between 0 and 8
+        brightness_val = (max(float(srl_brightness_val) / 1023.0, 0.00001) ** 2.2) * 2
 
-        r_val = (max(float(srl_r_val) / float(1024), 0.00001) ** 2.2) * 256
-        g_val = (max(float(srl_g_val) / float(1024), 0.00001) ** 2.2) * 256
-        b_val = (max(float(srl_b_val) / float(1024), 0.00001) ** 2.2) * 256
-        w_val = (max(float(srl_w_val) / float(1024), 0.00001) ** 2.2) * 256
+        r_val = (max(float(srl_r_val) / 1023.0, 0.00001) ** 2.2) * 255
+        g_val = (max(float(srl_g_val) / 1023.0, 0.00001) ** 2.2) * 255
+        b_val = (max(float(srl_b_val) / 1023.0, 0.00001) ** 2.2) * 255
+        w_val = (max(float(srl_w_val) / 1023.0, 0.00001) ** 2.2) * 255
 
     effective_time += (time.time() - last_measured_time) * speed_val
     last_measured_time = time.time()
