@@ -623,7 +623,10 @@ while True:
         # rainbow_sparkles(pixel_buffer)
         rgbw_sliders(pixel_buffer, r_val, g_val, b_val, w_val)
 
-    pixel_buffer_corrected = tuple(tuple(channel * brightness_val for channel in pixel) for pixel in pixel_buffer)
-    client.put_pixels(pixel_buffer_corrected, channel=0)
+    if current_pattern_id != 7:
+        pixel_buffer_corrected = tuple(tuple(channel * brightness_val for channel in pixel) for pixel in pixel_buffer)
+        client.put_pixels(pixel_buffer_corrected, channel=0)
+    else:
+        client.put_pixels(pixel_buffer, channel=0)
 
     time.sleep(1 / fps)
