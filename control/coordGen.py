@@ -26,7 +26,8 @@ lantern_locations = ((0.0, 0.0, 0.0),
                      (0.88, 0.88, 0.0), (-0.88, 0.88, 0.0),
                      (-0.88, -0.88, 0.0), (0.88, -0.88, 0.0))
 lantern_radii = (0.25, 0.2, 0.2, 0.2, 0.2, 0.15, 0.15, 0.15, 0.15)
-lantern_orientations = (270, 345, 90, 50, 110, 270, 270, 270, 290)
+# lantern_orientations = (270, 345, 90, 50, 110, 270, 270, 270, 290)
+lantern_orientations = (0, 0, 0, 0, 0, 0, 0, 0, 0)
 
 global_cartesian = []
 origin_delta = []
@@ -58,11 +59,8 @@ for lanternIndex, location in enumerate(lantern_locations):
         z = round(lantern_radii[lanternIndex] * math.cos(phi), 4)
 
         lantern_cartesian.append((x, y, z))
-        fudge = 1.5
-        if lanternIndex == 0:
-            fudge = 0
-        global_cartesian.append((location[0] + fudge + x, location[1] + y, location[2] + z))
-        origin_delta.append(math.sqrt((location[0] + fudge + x)**2 + (location[1] + y)**2 + (location[2] + z)**2))
+        global_cartesian.append((location[0] + x, location[1] + y, location[2] + z))
+        origin_delta.append(math.sqrt((location[0] + x)**2 + (location[1] + y)**2 + (location[2] + z)**2))
 
     local_cartesian.append(lantern_cartesian)
 
