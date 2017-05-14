@@ -505,7 +505,11 @@ if running_on_pi:
     GPIO.add_event_detect(11, GPIO.BOTH, callback=handle_auto_invert)
 
 increment_palette(False)
-auto_colour = not GPIO.input(13)
+
+if running_on_pi:
+    auto_colour = not GPIO.input(13)
+else:
+    auto_colour = True
 
 while True:
     if time.time() - last_mode_switch > auto_mode_interval:
