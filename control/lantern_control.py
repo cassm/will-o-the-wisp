@@ -397,7 +397,7 @@ w_val = 128
 slide_palette_scaling_factor = 128
 max_rgbw_slide_palette_len = int((slide_palette_scaling_factor * max(origin_delta) * 100) + 10)
 
-current_pattern_id = 0
+current_pattern_id = 1
 max_pattern_id = 7
 last_press = 0
 debounce_interval = 0.25
