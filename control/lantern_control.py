@@ -447,7 +447,7 @@ w_val = 128
 
 rgbw_slide_palette = []
 slide_palette_scaling_factor = 128
-max_rgbw_slide_palette_len = (slide_palette_scaling_factor * max(origin_delta) * 100) + 10
+max_rgbw_slide_palette_len = int((slide_palette_scaling_factor * max(origin_delta) * 100) + 10)
 
 current_pattern_id = 7
 max_pattern_id = 7
@@ -621,7 +621,7 @@ while True:
         rgbw_slide_palette.insert(0, tuple((g_val, r_val, b_val, w_val)))
 
     if len(rgbw_slide_palette) > max_rgbw_slide_palette_len:
-        del rgbw_slide_palette[max_rgbw_slide_palette_len:]
+        rgbw_slide_palette = rgbw_slide_palette[:max_rgbw_slide_palette_len]
 
     effective_time += (time.time() - last_measured_time) * speed_val
     last_measured_time = time.time()
