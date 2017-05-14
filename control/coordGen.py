@@ -60,7 +60,10 @@ for lanternIndex, location in enumerate(lantern_locations):
 
         lantern_cartesian.append((x, y, z))
         global_cartesian.append((location[0] + x, location[1] + y, location[2] + z))
-        origin_delta.append(math.sqrt((location[0] + x)**2 + (location[1] + y)**2 + (location[2] + z)**2))
+        if location == (0, 0, 0):
+            origin_delta.append(0)
+        else:
+            origin_delta.append(math.sqrt((location[0] + x)**2 + (location[1] + y)**2 + (location[2] + z)**2))
 
     local_cartesian.append(lantern_cartesian)
 
