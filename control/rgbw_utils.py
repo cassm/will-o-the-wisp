@@ -5,7 +5,7 @@ def get_buffer_size(n_pixels):
     return int(math.ceil(n_pixels * 1.34))
 
 
-def set_pixel(pixel_buffer, pixel_index, rgbw_val, simulate, min_level, invert):
+def set_pixel(pixel_buffer, pixel_index, rgbw_val, simulate, invert):
     if invert:
         rgb_val = list(rgbw_val[channel] + rgbw_val[3] for channel in range(3))
         rgb_val = list(max(255-channel, 0) for channel in rgb_val)
@@ -20,8 +20,7 @@ def set_pixel(pixel_buffer, pixel_index, rgbw_val, simulate, min_level, invert):
     else:
         for index, value in enumerate(rgbw_val):
             channel_index = pixel_index * 4 + index
-            channel_value = max(value, min_level)
-            pixel_buffer[int(math.floor(channel_index / 3))][int(channel_index % 3)] = channel_value
+            pixel_buffer[int(math.floor(channel_index / 3))][int(channel_index % 3)] = value
 
 
 def get_pixel(pixel_buffer, pixel_index, simulate=False):

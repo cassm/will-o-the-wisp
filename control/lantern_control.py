@@ -192,7 +192,7 @@ def get_pixel_colour(ii, auto):
 def colour_smooth(pixels, auto):
     for ii in range(n_pixels):
         rgbw_val = get_pixel_colour(ii, auto)
-        rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate, flare_level, invert)
+        rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate, invert)
 
 def colour_waves(pixels, time_factor, space_factor, auto):
     for ii in range(n_pixels):
@@ -200,7 +200,7 @@ def colour_waves(pixels, time_factor, space_factor, auto):
         sin_level = (math.sin(effective_time*time_factor + origin_delta[ii]*space_factor)/3 + 0.66) ** 2.2
         # rgbw_val = (255*sin_level for i in range(4))
         rgbw_val = list(channel * sin_level for channel in get_pixel_colour(ii, auto))
-        rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate, flare_level, invert)
+        rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate, invert)
 
 def fizzy_lifting_drink(pixels, start_pixel=0, end_pixel=n_pixels):
     # how many sine wave cycles are squeezed into our n_pixels
@@ -231,13 +231,27 @@ def fizzy_lifting_drink(pixels, start_pixel=0, end_pixel=n_pixels):
         b = blackstripes * color_utils.remap(math.cos((t / speed_b + pct * freq_b) * math.pi * 2), -1, 1, 0, 256)
         w = blackstripes * color_utils.remap(math.cos((t / speed_w + pct * freq_w) * math.pi * 2), -1, 1, 0, 256)
 
-        rgbw_utils.set_pixel(pixels, ii, (g, r, b, w), simulate, flare_level, invert)
+        rgbw_utils.set_pixel(pixels, ii, (g, r, b, w), simulate, invert)
 
 def vertical_star_drive(pixels, local_space_factor, lantern_space_factor, flash_speed, colour_speed, auto):
     for ii in range(n_pixels):
         lantern_id = int(ii / pixels_per_lantern)
         pixel_id = ii % pixels_per_lantern
 
+        z_pos = coords.local_cartesian[lantern_id][pixel_id][2]
+        lantern_origin_delta = math.sqrt(lantern_locations[lantern_id][0]**2 +lantern_locations[lantern_id][1]**2 + lantern_locations[lantern_id][2]**2)
+
+        ripple_val = math.sin(z_pos*-15 + effective_time*2)/2 + 0.5
+        w_intensity_val = math.sin(lantern_origin_delta + effective_time/-3)/2 + 0.5
+        w_val = (ripple_val * w_intensity_val)**2.2 * 255
+
+        bg_intensity_val = math.sin(lantern_origin_delta + effective_time/-3 + 0.4)/2 + 0.5
+        bg_colour = list(bg_intensity_val**2.2 * channel for channel in get_pixel_colour(ii, auto))
+
+        rgbw_val = list(max(w_val, channel) for channel in bg_colour)
+
+        rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate, invert)
+        '''
         local_space_sum = sum(tuple(
             coords.local_cartesian[lantern_id][pixel_id][component] * local_space_factor[component] for component in
             range(3)))
@@ -250,7 +264,8 @@ def vertical_star_drive(pixels, local_space_factor, lantern_space_factor, flash_
         new_val = list(mix_level * channel for channel in get_pixel_colour(ii, auto))
         new_val[3] = (math.sin(cycle_point) * 0.75 + 0.25) * 255
 
-        rgbw_utils.set_pixel(pixels, ii, new_val, simulate, flare_level, invert)
+        rgbw_utils.set_pixel(pixels, ii, new_val, simulate, invert)
+        '''
 
 
 next_drop = [0.0 for i in range(len(coords.lantern_locations))]
@@ -270,7 +285,7 @@ def colour_sparkle(pixels, rain_interval, shimmer_level, auto):
 
         new_value = tuple(max(fg_colour[channel], bg_colour[channel]) for channel in range(4))
 
-        rgbw_utils.set_pixel(pixels, ii, new_value, simulate, flare_level, invert)
+        rgbw_utils.set_pixel(pixels, ii, new_value, simulate, invert)
 
     for lantern in range(len(coords.lantern_locations)):
         if effective_time > next_drop[lantern]:
@@ -287,7 +302,7 @@ def colour_crunchy(pixels, auto, time_speed, colour_speed):
         mix_level = (math.sin(effective_time / -4 + coords.origin_delta[ii] / 8) + 2) / 3
         rgbw_val = list(channel * mix_level for channel in get_pixel_colour(ii, auto))
         rgbw_val[3] += w_level
-        rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate, flare_level, invert)
+        rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate, invert)
 
 active_swooshes = [[] for i in range(n_lanterns)]
 next_swoosh = 0
@@ -322,7 +337,7 @@ def make_me_one(pixels, shimmer_level, white_level, swoosh_interval):
 
         w = max(w, swoosh_level * 255)
 
-        rgbw_utils.set_pixel(pixels, ii, (g, r, b, w), simulate, flare_level, invert)
+        rgbw_utils.set_pixel(pixels, ii, (g, r, b, w), simulate, invert)
 
 next_sparks = [0.0 for i in range(n_lanterns)]
 last_sparks = [0.0 for i in range(n_pixels)]
@@ -360,8 +375,7 @@ def fire(pixels, spark_interval):
         g, r, b, w = palettes["fire"][palette_index]
 
         rgbw_utils.set_pixel(pixels, ii, (g * 0.5, r, b + math.sin(effective_time / -9.7 + origin_delta[ii]) * 8,
-                                          w + math.sin(effective_time / -4 + origin_delta[ii]) * 64), simulate,
-                             flare_level, invert)
+                                          w + math.sin(effective_time / -4 + origin_delta[ii]) * 64), simulate, invert)
 
 current_palette_id = 0
 paletteTimer = time.time()
@@ -382,8 +396,6 @@ max_pattern_id = 7
 last_press = 0
 debounce_interval = 0.25
 
-last_flare_event = 0
-flare_level = 0
 auto_colour = False
 invert = False
 
@@ -404,7 +416,6 @@ def increment_palette(randomise):
 
 def handle_button_input(channel):
     global last_press
-    global last_flare_event
     global last_mode_switch
     global current_pattern_id
 
@@ -421,54 +432,44 @@ def handle_button_input(channel):
             while new_pattern_id == current_pattern_id:
                 new_pattern_id = random.randrange(max_pattern_id + 1)
             current_pattern_id = new_pattern_id
-            last_flare_event = effective_time
         elif channel == 33:
             print ("Smooth")
             current_pattern_id = 0
             last_mode_switch = time.time()
-            last_flare_event = effective_time
         elif channel == 31:
             print("Crunchy")
             current_pattern_id = 5
             last_mode_switch = time.time()
-            last_flare_event = effective_time
         elif channel == 29:
             print("Sparkles")
             current_pattern_id = 2
             last_mode_switch = time.time()
             for lantern in range(n_lanterns):
                 active_swooshes[lantern].append((effective_time - 15, 1))
-            last_flare_event = effective_time
         elif channel == 18:
             print("Waves")
             current_pattern_id = 8
             last_mode_switch = time.time()
-            last_flare_event = effective_time
         elif channel == 16:
             print("Star drive")
             current_pattern_id = 3
             last_mode_switch = time.time()
-            last_flare_event = effective_time
         elif channel == 37:
             print("NULL")
             # current_pattern_id = 1
             last_mode_switch = time.time()
-            last_flare_event = effective_time
         elif channel == 36:
             print("Fizzy lifting drink")
             current_pattern_id = 7
             last_mode_switch = time.time()
-            last_flare_event = effective_time
         elif channel == 32:
             print("Sacred Fuckin Flame")
             current_pattern_id = 6
             last_mode_switch = time.time()
-            last_flare_event = effective_time
         elif channel == 22:
             print("Make me one with everything")
             current_pattern_id = 4
             last_mode_switch = time.time()
-            last_flare_event = effective_time
 
 
 def handle_auto_invert(channel):
@@ -512,9 +513,6 @@ while True:
                 increment_palette(True)
 
             current_pattern_id = new_mode
-            last_flare_event = effective_time
-
-    flare_level = 512.0 * (1 / (max(((effective_time - last_flare_event) * 2) ** 1.5, 1) ** 2.2))
 
     if serial_initialised:
         try:
@@ -572,10 +570,10 @@ while True:
     elif current_pattern_id == 8:
         colour_waves(pixel_buffer, -1, 1, auto_colour)
 
-    if current_pattern_id != 7 or auto_colour:
-        pixel_buffer_corrected = tuple(tuple(channel * brightness_val for channel in pixel) for pixel in pixel_buffer)
-        client.put_pixels(pixel_buffer_corrected, channel=0)
-    else:
-        client.put_pixels(pixel_buffer, channel=0)
+    # if current_pattern_id != 7 or auto_colour:
+    pixel_buffer_corrected = tuple(tuple(channel * brightness_val for channel in pixel) for pixel in pixel_buffer)
+    client.put_pixels(pixel_buffer_corrected, channel=0)
+    # else:
+        # client.put_pixels(pixel_buffer, channel=0)
 
     time.sleep(1 / fps)
