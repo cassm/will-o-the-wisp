@@ -277,8 +277,7 @@ def colour_sparkle(pixels, rain_interval, shimmer_level, auto):
         rgbw_val = get_pixel_colour(ii, auto)
 
         time_coefficients = [-1, -1.1, -1.2, -1.3]
-        bg_colour = list((min(0, math.sin(effective_time / coefficient + origin_delta[ii] * 5) * shimmer_level)) + rgbw_val[channel]/4 for channel, coefficient in
-                         enumerate(time_coefficients))
+        bg_colour = list((min(0, math.sin(effective_time / coefficient + origin_delta[ii] * 5) * shimmer_level)) + rgbw_val[channel]/4 for channel, coefficient in enumerate(time_coefficients))
 
         drop_intensity = inverse_square(effective_time, last_raindrops[ii][4], 1.2)
         fg_colour = tuple(last_raindrops[ii][channel] * drop_intensity for channel in range(4))
@@ -297,11 +296,18 @@ def colour_sparkle(pixels, rain_interval, shimmer_level, auto):
 
 def colour_crunchy(pixels, auto, time_speed, colour_speed):
     for ii in range(n_pixels):
-        w_level = math.sin(effective_time * -2 * time_speed + coords.origin_delta[ii] * 15) * (
-            math.sin(effective_time / -2 + origin_delta[ii] / 4) + 3) * 16
+        time_coefficients = [-1.5, -2, -2.5, -1.3]
+        bg_val = get_pixel_colour(ii, auto)
+
+        shimmer_level = sum(bg_val)/6
+        shimmer_val = list(math.sin(effective_time / coefficient + origin_delta[ii] * 5) * shimmer_level for coefficient in time_coefficients)
+        rgbw_val = list(bg_val[channel] + shimmer_val[channel] for channel in range(4))
+        # rgbw_val = list((max(0, math.sin(effective_time / coefficient + origin_delta[ii] * 5) * shimmer_level)) + bg_val[channel]/4 for channel, coefficient in enumerate(time_coefficients))
+
+        w_level = math.sin(effective_time * -2 * time_speed + coords.origin_delta[ii] * 15) * ( math.sin(effective_time / -2 + origin_delta[ii] / 4) + 3) * 4
+
         mix_level = (math.sin(effective_time / -4 + coords.origin_delta[ii] / 8) + 2) / 3
-        rgbw_val = list(channel * mix_level for channel in get_pixel_colour(ii, auto))
-        rgbw_val[3] += w_level
+        # rgbw_val[3] += w_level
         rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate, invert)
 
 active_swooshes = [[] for i in range(n_lanterns)]
