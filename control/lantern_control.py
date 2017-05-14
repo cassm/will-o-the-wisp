@@ -423,20 +423,16 @@ def fire(pixels, spark_interval):
                                           w + math.sin(effective_time / -4 + origin_delta[ii]) * 64), simulate,
                              flare_level, invert)
 
-rgbw_slide_palette = []
-max_rgbw_slide_palette_len = 200000
-
 def rgbw_sliders(pixels, r_val, g_val, b_val, w_val):
     global rgbw_slide_palette
 
     for ii in range(n_pixels):
-        # rgbw_utils.set_pixel(pixels, ii, (g_val, r_val, b_val, w_val), simulate, flare_level, invert)
-        rgbw_slide_palette.insert(0, tuple((g_val, r_val, b_val, w_val)))
-        if len(rgbw_slide_palette) > max_rgbw_slide_palette_len:
-            del rgbw_slide_palette[-1]
+        pixel_index = int(coords.origin_delta[ii] * 100)
 
-        rgbw_val = rgbw_slide_palette[min(len(rgbw_slide_palette)-1, int(coords.origin_delta[ii] * 1000 * speed_val))] #effective_time * time_factor + coords.origin_delta[ii]))]
-        rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate, flare_level, invert)
+        if pixel_index < len(rgbw_slide_palette):
+            rgbw_utils.set_pixel(pixels, ii, rgbw_slide_palette[pixel_index], simulate, flare_level, invert)
+        else:
+            rgbw_utils.set_pixel(pixels, ii, (0, 0, 0, 0), simulate, flare_level, invert)
 
 current_palette_id = 0
 paletteTimer = time.time()
@@ -448,6 +444,10 @@ r_val = 128
 g_val = 128
 b_val = 128
 w_val = 128
+
+rgbw_slide_palette = []
+slide_palette_scaling_factor = 128
+max_rgbw_slide_palette_len = (slide_palette_scaling_factor * max(origin_delta) * 100) + 10
 
 current_pattern_id = 7
 max_pattern_id = 7
@@ -611,6 +611,17 @@ while True:
         g_val = (max(float(srl_g_val) / 1023.0, 0.00001) ** 2.2) * 255
         b_val = (max(float(srl_b_val) / 1023.0, 0.00001) ** 2.2) * 255
         w_val = (max(float(srl_w_val) / 1023.0, 0.00001) ** 2.2) * 255
+
+    else:
+        r_val = 128*math.sin(effective_time) + 128
+
+    sample_width = int(speed_val/8 * slide_palette_scaling_factor)
+
+    for sample in range(sample_width):
+        rgbw_slide_palette.insert(0, tuple((g_val, r_val, b_val, w_val)))
+
+    if len(rgbw_slide_palette) > max_rgbw_slide_palette_len:
+        del rgbw_slide_palette[max_rgbw_slide_palette_len:]
 
     effective_time += (time.time() - last_measured_time) * speed_val
     last_measured_time = time.time()
