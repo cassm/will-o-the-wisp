@@ -99,6 +99,9 @@ paletteFiles = glob.glob(palettePath + "*" + paletteExtension)
 paletteNames = list((fileName[len(palettePath):-len(paletteExtension)], fileName) for fileName in paletteFiles)
 palettes = {}
 
+auto_palette = "auto"
+manual_palette = "manual"
+
 for title, path in paletteNames:
     im = Image.open(path, "r")
     width, height = im.size
@@ -111,6 +114,8 @@ for title, path in paletteNames:
     brightnessFactor = 255 / maxVal
     corrected_rgbw_vals = tuple(tuple(channel * brightnessFactor for channel in pixel) for pixel in rgbwVals)
     palettes[title] = corrected_rgbw_vals
+
+palettes[manual_palette] = []
 
 # -------------------------------------------------------------------------------
 # handle command line
@@ -423,16 +428,20 @@ def fire(pixels, spark_interval):
                                           w + math.sin(effective_time / -4 + origin_delta[ii]) * 64), simulate,
                              flare_level, invert)
 
-def rgbw_sliders(pixels, r_val, g_val, b_val, w_val):
-    global rgbw_slide_palette
+def rgbw_sliders(pixels, auto, time_factor):
+    if auto:
+        for ii in range(n_pixels):
+            rgbw_val = palettes[auto_palette][int((effective_time * time_factor + coords.origin_delta[ii]) % len(palettes[auto_palette]))]
+            rgbw_utils.set_pixel(pixels, ii, rgbw_val, simulate, flare_level, invert)
 
-    for ii in range(n_pixels):
-        pixel_index = int(coords.origin_delta[ii] * 100)
+    else:
+        for ii in range(n_pixels):
+            pixel_index = int(coords.origin_delta[ii] * 100)
 
-        if pixel_index < len(rgbw_slide_palette):
-            rgbw_utils.set_pixel(pixels, ii, rgbw_slide_palette[pixel_index], simulate, flare_level, invert)
-        else:
-            rgbw_utils.set_pixel(pixels, ii, (0, 0, 0, 0), simulate, flare_level, invert)
+            if pixel_index < len(palettes[manual_palette]):
+                rgbw_utils.set_pixel(pixels, ii, palettes[manual_palette][pixel_index], simulate, flare_level, invert)
+            else:
+                rgbw_utils.set_pixel(pixels, ii, (0, 0, 0, 0), simulate, flare_level, invert)
 
 current_palette_id = 0
 paletteTimer = time.time()
@@ -445,7 +454,6 @@ g_val = 128
 b_val = 128
 w_val = 128
 
-rgbw_slide_palette = []
 slide_palette_scaling_factor = 128
 max_rgbw_slide_palette_len = int((slide_palette_scaling_factor * max(origin_delta) * 100) + 10)
 
@@ -456,7 +464,7 @@ debounce_interval = 0.25
 
 last_flare_event = 0
 flare_level = 0
-flare = False
+auto_colour = False
 invert = False
 
 # do not select fire, as not appropriate for most purposes
@@ -545,13 +553,13 @@ def handle_button_input(channel):
             last_flare_event = effective_time
 
 
-def handle_flare_invert(channel):
-    global flare
+def handle_auto_invert(channel):
+    global auto_colour
     global invert
 
     if running_on_pi:
         if channel == 13:
-            flare = not GPIO.input(13)
+            auto_colour = not GPIO.input(13)
         elif channel == 11:
             invert = not GPIO.input(11)
 
@@ -568,15 +576,12 @@ if running_on_pi:
     GPIO.add_event_detect(36, GPIO.FALLING, callback=handle_button_input)
     GPIO.add_event_detect(32, GPIO.FALLING, callback=handle_button_input)
     GPIO.add_event_detect(22, GPIO.FALLING, callback=handle_button_input)
-    GPIO.add_event_detect(13, GPIO.BOTH, callback=handle_flare_invert)
-    GPIO.add_event_detect(11, GPIO.BOTH, callback=handle_flare_invert)
+    GPIO.add_event_detect(13, GPIO.BOTH, callback=handle_auto_invert)
+    GPIO.add_event_detect(11, GPIO.BOTH, callback=handle_auto_invert)
 
 increment_palette(False)
 
 while True:
-    if flare:
-        last_flare_event = effective_time
-
     if time.time() - last_mode_switch > auto_mode_interval:
         last_mode_switch = time.time()
         if GPIO.input(15):
@@ -618,10 +623,10 @@ while True:
     sample_width = int(speed_val/8 * slide_palette_scaling_factor)
 
     for sample in range(sample_width):
-        rgbw_slide_palette.insert(0, tuple((g_val, r_val, b_val, w_val)))
+        palettes[manual_palette].insert(0, tuple((g_val, r_val, b_val, w_val)))
 
-    if len(rgbw_slide_palette) > max_rgbw_slide_palette_len:
-        rgbw_slide_palette = rgbw_slide_palette[:max_rgbw_slide_palette_len]
+    if len(palettes[manual_palette]) > max_rgbw_slide_palette_len:
+        palettes[manual_palette] = palettes[manual_palette][:max_rgbw_slide_palette_len]
 
     effective_time += (time.time() - last_measured_time) * speed_val
     last_measured_time = time.time()
@@ -642,7 +647,7 @@ while True:
         fire(pixel_buffer, 0.2)
     elif current_pattern_id == 7:
         # rainbow_sparkles(pixel_buffer)
-        rgbw_sliders(pixel_buffer, r_val, g_val, b_val, w_val)
+        rgbw_sliders(pixel_buffer, auto_colour, 1)
 
     if current_pattern_id != 7:
         pixel_buffer_corrected = tuple(tuple(channel * brightness_val for channel in pixel) for pixel in pixel_buffer)
