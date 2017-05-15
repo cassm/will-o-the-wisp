@@ -62,6 +62,9 @@ effective_time = time.time()
 last_mode_switch = time.time()
 auto_mode_interval = 300  # 5 minutes
 
+colour_correction_factor = [0.7, 0.8, 1.0, 1.0]
+# colour_correction_factor = [1, 1, 1.0, 1.0]
+
 simulate = not running_on_pi
 
 serial_initialised = False
@@ -179,13 +182,15 @@ def inverse_square(x, y, exponent):
 
 def get_pixel_colour(ii, auto):
     if auto:
-        time_factor = 50
+        time_factor = 5
         return palettes[auto_palette][int((effective_time * time_factor + coords.origin_delta[ii]) % len(palettes[auto_palette]))]
     else:
         pixel_index = int(coords.origin_delta[ii] * 100)
 
         if pixel_index < len(palettes[manual_palette]):
             return palettes[manual_palette][pixel_index]
+        elif len(palettes[manual_palette]) > 0:
+            return palettes[manual_palette][-1]
         else:
             return (0, 0, 0, 0)
 
@@ -296,15 +301,14 @@ def colour_sparkle(pixels, rain_interval, shimmer_level, auto):
 
 def colour_crunchy(pixels, auto, time_speed, colour_speed):
     for ii in range(n_pixels):
-        time_coefficients = [-1.5, -2, -2.5, -1.3]
+        time_coefficients = [-1.5, -2, -2.5]
         bg_val = get_pixel_colour(ii, auto)
 
         shimmer_level = sum(bg_val)/6
         shimmer_val = list(math.sin(effective_time / coefficient + origin_delta[ii] * 5) * shimmer_level for coefficient in time_coefficients)
-        rgbw_val = list(bg_val[channel] + shimmer_val[channel] for channel in range(4))
+        rgbw_val = list(bg_val[channel] + shimmer_val[channel] for channel in range(3))
+        rgbw_val.append(bg_val[3]) # do not ripple white
         # rgbw_val = list((max(0, math.sin(effective_time / coefficient + origin_delta[ii] * 5) * shimmer_level)) + bg_val[channel]/4 for channel, coefficient in enumerate(time_coefficients))
-
-        w_level = math.sin(effective_time * -2 * time_speed + coords.origin_delta[ii] * 15) * ( math.sin(effective_time / -2 + origin_delta[ii] / 4) + 3) * 4
 
         mix_level = (math.sin(effective_time / -4 + coords.origin_delta[ii] / 8) + 2) / 3
         # rgbw_val[3] += w_level
@@ -397,7 +401,7 @@ w_val = 128
 slide_palette_scaling_factor = 128
 max_rgbw_slide_palette_len = int((slide_palette_scaling_factor * max(origin_delta) * 100) + 10)
 
-current_pattern_id = 1
+current_pattern_id = 0
 max_pattern_id = 7
 last_press = 0
 debounce_interval = 0.25
@@ -485,6 +489,8 @@ def handle_auto_invert(channel):
     if running_on_pi:
         if channel == 13:
             auto_colour = not GPIO.input(13)
+            if not auto_colour:
+                palettes[manual_palette] = []
         elif channel == 11:
             invert = not GPIO.input(11)
 
@@ -529,31 +535,35 @@ while True:
             srl.write('x')
             srl_brightness_val = int(srl.readline())
             srl_speed_val = int(srl.readline())
-            srl_r_val = 1023 - int(srl.readline())
-            srl_g_val = 1023 - int(srl.readline())
-            srl_b_val = 1023 - int(srl.readline())
-            srl_w_val = 1023 - int(srl.readline())
+
+            if not auto_colour:
+                srl_r_val = 1023 - int(srl.readline())
+                srl_g_val = 1023 - int(srl.readline())
+                srl_b_val = 1023 - int(srl.readline())
+                srl_w_val = 1023 - int(srl.readline())
+
+                r_val = (max(float(srl_r_val) / 1023.0, 0.00001) ** 2.2) * 255
+                g_val = (max(float(srl_g_val) / 1023.0, 0.00001) ** 2.2) * 255
+                b_val = (max(float(srl_b_val) / 1023.0, 0.00001) ** 2.2) * 255
+                w_val = (max(float(srl_w_val) / 1023.0, 0.00001) ** 2.2) * 255
+
+            else:
+                srl.flushInput()
+
         except Exception as e:
             pass
 
         speed_val = max(float(srl_speed_val) / 1023.0, 0.00001) * 8  # between 0 and 8
         brightness_val = (max(float(srl_brightness_val) / 1023.0, 0.00001) ** 2.2) * 2
 
-        r_val = (max(float(srl_r_val) / 1023.0, 0.00001) ** 2.2) * 255
-        g_val = (max(float(srl_g_val) / 1023.0, 0.00001) ** 2.2) * 255
-        b_val = (max(float(srl_b_val) / 1023.0, 0.00001) ** 2.2) * 255
-        w_val = (max(float(srl_w_val) / 1023.0, 0.00001) ** 2.2) * 255
-
-    else:
-        r_val = 128*math.sin(effective_time) + 128
-
     sample_width = int(speed_val/8 * slide_palette_scaling_factor)
 
-    for sample in range(sample_width):
-        palettes[manual_palette].insert(0, tuple((g_val, r_val, b_val, w_val)))
+    if not auto_colour:
+        for sample in range(sample_width):
+            palettes[manual_palette].insert(0, tuple((g_val, r_val, b_val, w_val)))
 
-    if len(palettes[manual_palette]) > max_rgbw_slide_palette_len:
-        palettes[manual_palette] = palettes[manual_palette][:max_rgbw_slide_palette_len]
+        if len(palettes[manual_palette]) > max_rgbw_slide_palette_len:
+            palettes[manual_palette] = palettes[manual_palette][:max_rgbw_slide_palette_len]
 
     effective_time += (time.time() - last_measured_time) * speed_val
     last_measured_time = time.time()
@@ -581,7 +591,7 @@ while True:
         colour_waves(pixel_buffer, -1, 1, auto_colour)
 
     # if current_pattern_id != 7 or auto_colour:
-    pixel_buffer_corrected = tuple(tuple(channel * brightness_val for channel in pixel) for pixel in pixel_buffer)
+    pixel_buffer_corrected = tuple(tuple(channel * brightness_val * colour_correction_factor[i] for i, channel in enumerate(pixel)) for pixel in pixel_buffer)
     client.put_pixels(pixel_buffer_corrected, channel=0)
     # else:
         # client.put_pixels(pixel_buffer, channel=0)
